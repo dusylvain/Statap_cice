@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Récupération des données
+
+```{r}
+capital=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Capital.csv")
+croiss=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Growth-Accounts.csv")
+travail=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Labour.csv")
+
+compte=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_National-Accounts.csv")
+description=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Variable-Description.csv")
+
+```
+On crée les dataframes : france et allemagne
+```{r}
+Datafr=subset(compte, country == "FR")
+Dataall=subset(compte, country == "DE")
+Emploifr=subset(Datafr, var=="EMP")#on récupère le nombre d'emplois
+Emploiall=subset(Dataall, var=="EMP")
+Emploitotall=subset(Emploiall, code=="TOT")
+Emploitotfr=subset(Emploifr, code=="TOT")
+```
+
+```{r}
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015')#les colonnes de données
+```
+```{r}
+Emploitotall=Emploitotall[, lignedata]
+Emploitotfr=Emploitotfr[, lignedata]
+```
+
+
+```{r}
+par(mfrow = c(1,2))
+plot(t(Emploitotall),  xlab = "temps", ylab = "nombre d'emplois")
+plot(t(Emploitotfr),  xlab = "temps", ylab = "nombre d'emplois")
+```
+
+
+
+
+
+
+
