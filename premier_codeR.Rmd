@@ -5,6 +5,10 @@ output: html_notebook
 Récupération des données
 
 ```{r}
+library(ggplot2)
+library(reshape2)
+```
+```{r}
 capital=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Capital.csv")
 croiss=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Growth-Accounts.csv")
 travail=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Labour.csv")
@@ -19,27 +23,39 @@ description=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Variable-Descriptio
 lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015')#les colonnes de données
 date=seq(1995, 2015)
 ```
-```{r}
-graphique<-function(pays, base, variable, title) {plot(date, t(subset(base, country == pays & var==variable & code=="TOT")[, lignedata]), xlab="temps", ylab=variable)
-  title(title)}
-```
 
 ```{r}
-par(mfrow = c(1,2))
-graphique("FR", compte, "EMP", "emploi en France")
-graphique("DE", compte, "EMP", "emploi en Allemagne")
-```
-
-
-```{r}
-par(mfrow = c(1,2))
-graphique("FR", capital, "Ip_OCon", "investissement en France")
-graphique("DE", capital, "Ip_OCon", "investissement en Allemagne")
+ligne_pays<-function(base,vari,codei,pays,variable='var')
+{
+tableau=subset(base,var==vari& code==codei)[c("country", lignedata)] 
+rownames(tableau)<-tableau[,1]
+tableau<-tableau[,-1]
+tableau<-t(tableau)
+tabeleau<-tableau[,pays]
+df <- data.frame(x=1995:2015, data.frame(tabeleau))
+df.melted <- melt(df, id="x")
+qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") + ylab(variable)
+}
 ```
 
 
 
+```{r}
+ligne_pays( compte, vari="EMP", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de l'emploi dans les grands pays européens") +
+  xlab("année") + ylab("nombre d'emplois en milliers")
+```
 
+
+```{r}
+ligne_pays( capital, vari="Ip_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution de l'investissement dans les grands pays européens") +
+  xlab("année") + ylab("formation brute de capital fixe, base 2010=100")
+```
+```
+
+```{r}
+ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
+  xlab("année") + ylab("coût du travail")
+```
 
 
 
