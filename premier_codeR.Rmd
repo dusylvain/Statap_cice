@@ -20,7 +20,7 @@ description=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Variable-Descriptio
 
 
 ```{r}
-lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015')#les colonnes de données
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données
 date=seq(1995, 2015)
 ```
 
@@ -32,7 +32,7 @@ rownames(tableau)<-tableau[,1]
 tableau<-tableau[,-1]
 tableau<-t(tableau)
 tabeleau<-tableau[,pays]
-df <- data.frame(x=1995:2015, data.frame(tabeleau))
+df <- data.frame(x=1995:2017, data.frame(tabeleau))
 df.melted <- melt(df, id="x")
 qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") + ylab(variable)
 }
@@ -47,14 +47,14 @@ ligne_pays( compte, vari="EMP", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") 
 
 
 ```{r}
-ligne_pays( capital, vari="Ip_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution de l'investissement dans les grands pays européens") +
-  xlab("année") + ylab("formation brute de capital fixe, base 2010=100")
+ligne_pays( capital, vari="Iq_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution de l'investissement dans les grands pays européens") +
+  xlab("année") + ylab("formation brute de capital fixe, volume en prix 2010")
 ```
 ```
 
 ```{r}
 ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
-  xlab("année") + ylab("coût du travail")
+  xlab("année") + ylab("coût du travail en millions d'euros")
 ```
 
 
