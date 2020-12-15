@@ -38,13 +38,20 @@ qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") +
 }
 ```
 
-
+```{r}
+ligne_pays( compte, vari="VA", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de la production dans les grands pays européens") +
+  xlab("année") + ylab("Valeur ajoutée, en millions d'euros/livres")
+```
 
 ```{r}
 ligne_pays( compte, vari="EMP", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de l'emploi dans les grands pays européens") +
   xlab("année") + ylab("nombre d'emplois en milliers")
 ```
 
+```{r}
+ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
+  xlab("année") + ylab("coût du travail en millions d'euros")
+```
 
 ```{r}
 ligne_pays( capital, vari="Iq_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution de l'investissement dans les grands pays européens") +
@@ -52,10 +59,7 @@ ligne_pays( capital, vari="Iq_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES",
 ```
 ```
 
-```{r}
-ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
-  xlab("année") + ylab("coût du travail en millions d'euros")
-```
+
 
 
 
