@@ -53,13 +53,31 @@ ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"
   xlab("année") + ylab("coût du travail en millions d'euros")
 ```
 
+
 ```{r}
-ligne_pays( capital, vari="Iq_OCon", codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution de l'investissement dans les grands pays européens") +
-  xlab("année") + ylab("formation brute de capital fixe, volume en prix 2010")
+tableau=subset(croiss,var=='LAB' & code=='TOT'& country=='FR')[lignedata]
 ```
+
+```{r}
+library("tseries")
+```
+```{r}
+serietemp=c(log(tableau))
 ```
 
 
+```{r}
+adf.test(c(serietemp))
+```
+
+```{r}
+PP.test(serietemp)
+```
+
+```{r}
+kpss.test(serietemp)
+```
+Les deux tests qui marchent sont cohérents( ils n'ont pas le même H_0) : le log de la série de l'emploi total est bien stationnaire.
 
 
 
