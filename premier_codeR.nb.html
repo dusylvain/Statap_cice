@@ -1837,45 +1837,22 @@ qplot(x=x, y=value, color=variable, data=df.melted, geom=&quot;line&quot;)+ xlab
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGFibGVhdT1zdWJzZXQoY3JvaXNzLHZhcj09J0xBQicgJiBjb2RlPT0nVE9UJyYgY291bnRyeT09J0ZSJylbbGlnbmVkYXRhXVxuYGBgIn0= -->
-<pre class="r"><code>tableau=subset(croiss,var==&#39;LAB&#39; &amp; code==&#39;TOT&#39;&amp; country==&#39;FR&#39;)[lignedata]</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGFibGVhdT1zdWJzZXQoY3JvaXNzLHZhcj09J0xBQicgJiBjb2RlPT0nVE9UJyYgY291bnRyeT09J0ZSJylbbGlnbmVkYXRhXVxuc2VyaWV0ZW1wPWMobG9nKHRhYmxlYXUpKVxuYGBgIn0= -->
+<pre class="r"><code>tableau=subset(croiss,var==&#39;LAB&#39; &amp; code==&#39;TOT&#39;&amp; country==&#39;FR&#39;)[lignedata]
+serietemp=c(log(tableau))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShcInRzZXJpZXNcIilcbmBgYCJ9 -->
-<pre class="r"><code>library(&quot;tseries&quot;)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWRmLnRlc3Qoc2VyaWV0ZW1wKVxuYGBgIn0= -->
+<pre class="r"><code>adf.test(serietemp)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoibGUgcGFja2FnZSDjpLzjuLF0c2VyaWVz46S847iyIGEg5pS847i5dOaUvOO4uSBjb21waWzmlLzjuLkgYXZlYyBsYSB2ZXJzaW9uIFIgMy42LjNSZWdpc3RlcmVkIFMzIG1ldGhvZCBvdmVyd3JpdHRlbiBieSAncXVhbnRtb2QnOlxuICBtZXRob2QgICAgICAgICAgICBmcm9tXG4gIGFzLnpvby5kYXRhLmZyYW1lIHpvbyBcblxuICAgIOOkvOO4sXRzZXJpZXPjpLzjuLIgdmVyc2lvbjogMC4xMC00OFxuXG4gICAg46S847ixdHNlcmllc+OkvOO4siBpcyBhIHBhY2thZ2UgZm9yIHRpbWUgc2VyaWVzIGFuYWx5c2lzIGFuZCBjb21wdXRhdGlvbmFsXG4gICAgZmluYW5jZS5cblxuICAgIFNlZSDjpLzjuLFsaWJyYXJ5KGhlbHA9XCJ0c2VyaWVzXCIp46S847iyIGZvciBkZXRhaWxzLlxuIn0= -->
-<pre><code>le package 㤼㸱tseries㤼㸲 a 攼㸹t攼㸹 compil攼㸹 avec la version R 3.6.3Registered S3 method overwritten by &#39;quantmod&#39;:
-  method            from
-  as.zoo.data.frame zoo 
-
-    㤼㸱tseries㤼㸲 version: 0.10-48
-
-    㤼㸱tseries㤼㸲 is a package for time series analysis and computational
-    finance.
-
-    See 㤼㸱library(help=&quot;tseries&quot;)㤼㸲 for details.</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2VyaWV0ZW1wPWMobG9nKHRhYmxlYXUpKVxuYGBgIn0= -->
-<pre class="r"><code>serietemp=c(log(tableau))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWRmLnRlc3QoYyhzZXJpZXRlbXApKVxuYGBgIn0= -->
-<pre class="r"><code>adf.test(c(serietemp))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiXG5cdEF1Z21lbnRlZCBEaWNrZXktRnVsbGVyIFRlc3RcblxuZGF0YTogIGMoc2VyaWV0ZW1wKVxuRGlja2V5LUZ1bGxlciA9IC0wLjY0NjY1LCBMYWcgb3JkZXIgPSAyLCBwLXZhbHVlID0gMC45NjI4XG5hbHRlcm5hdGl2ZSBoeXBvdGhlc2lzOiBzdGF0aW9uYXJ5XG4ifQ== -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5cdEF1Z21lbnRlZCBEaWNrZXktRnVsbGVyIFRlc3RcblxuZGF0YTogIHNlcmlldGVtcFxuRGlja2V5LUZ1bGxlciA9IC0wLjY0NjY1LCBMYWcgb3JkZXIgPSAyLCBwLXZhbHVlID0gMC45NjI4XG5hbHRlcm5hdGl2ZSBoeXBvdGhlc2lzOiBzdGF0aW9uYXJ5XG4ifQ== -->
 <pre><code>
     Augmented Dickey-Fuller Test
 
-data:  c(serietemp)
+data:  serietemp
 Dickey-Fuller = -0.64665, Lag order = 2, p-value = 0.9628
 alternative hypothesis: stationary</code></pre>
 <!-- rnb-output-end -->
@@ -1883,12 +1860,16 @@ alternative hypothesis: stationary</code></pre>
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuUFAudGVzdChzZXJpZXRlbXApXG5gYGAifQ== -->
-<pre class="r"><code>PP.test(serietemp)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2VyaWV0ZW1wbnVtPWFzLm51bWVyaWMoc2VyaWV0ZW1wKVxuUFAudGVzdChzZXJpZXRlbXBudW0pXG5gYGAifQ== -->
+<pre class="r"><code>serietempnum=as.numeric(serietemp)
+PP.test(serietempnum)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gbW9kZWwuZnJhbWUuZGVmYXVsdChmb3JtdWxhID0geXQgfiAxICsgdSArIHl0MSwgZHJvcC51bnVzZWQubGV2ZWxzID0gVFJVRSkgOiBcbiAgdHlwZSAobGlzdCkgaW5jb3JyZWN0IHBvdXIgbGEgdmFyaWFibGUgJ3l0J1xuIn0= -->
-<pre><code>Error in model.frame.default(formula = yt ~ 1 + u + yt1, drop.unused.levels = TRUE) : 
-  type (list) incorrect pour la variable &#39;yt&#39;</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiXG5cdFBoaWxsaXBzLVBlcnJvbiBVbml0IFJvb3QgVGVzdFxuXG5kYXRhOiAgc2VyaWV0ZW1wbnVtXG5EaWNrZXktRnVsbGVyID0gLTAuMDE3NTcsIFRydW5jYXRpb24gbGFnIHBhcmFtZXRlciA9IDIsIHAtdmFsdWUgPSAwLjk5XG4ifQ== -->
+<pre><code>
+    Phillips-Perron Unit Root Test
+
+data:  serietempnum
+Dickey-Fuller = -0.01757, Truncation lag parameter = 2, p-value = 0.99</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1909,10 +1890,10 @@ KPSS Level = 0.85453, Truncation lag parameter = 2, p-value = 0.01</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>Les deux tests qui marchent sont cohérents( ils n’ont pas le même H_0) : le log de la série de l’emploi total est bien stationnaire.</p>
+<p>Les trois tests sont cohérents( ils n’ont pas le même H_0) : le log de la série de l’emploi total en France est bien stationnaire.</p>
 <!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIlIgTm90ZWJvb2siDQpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sNCi0tLQ0KUsOpY3Vww6lyYXRpb24gZGVzIGRvbm7DqWVzDQoNCmBgYHtyfQ0KbGlicmFyeShnZ3Bsb3QyKQ0KbGlicmFyeShyZXNoYXBlMikNCmBgYA0KYGBge3J9DQpjYXBpdGFsPXJlYWQuY3N2KCJDOi9Vc2Vycy9zeWx2YS9EZXNrdG9wL2dpdC9TdGF0YXBfY2ljZS9TdGF0aXN0aWNhbF9DYXBpdGFsLmNzdiIpDQpjcm9pc3M9cmVhZC5jc3YoIkM6L1VzZXJzL3N5bHZhL0Rlc2t0b3AvZ2l0L1N0YXRhcF9jaWNlL1N0YXRpc3RpY2FsX0dyb3d0aC1BY2NvdW50cy5jc3YiKQ0KdHJhdmFpbD1yZWFkLmNzdigiQzovVXNlcnMvc3lsdmEvRGVza3RvcC9naXQvU3RhdGFwX2NpY2UvU3RhdGlzdGljYWxfTGFib3VyLmNzdiIpDQoNCmNvbXB0ZT1yZWFkLmNzdigiQzovVXNlcnMvc3lsdmEvRGVza3RvcC9naXQvU3RhdGFwX2NpY2UvU3RhdGlzdGljYWxfTmF0aW9uYWwtQWNjb3VudHMuY3N2IikNCmRlc2NyaXB0aW9uPXJlYWQuY3N2KCJDOi9Vc2Vycy9zeWx2YS9EZXNrdG9wL2dpdC9TdGF0YXBfY2ljZS9WYXJpYWJsZS1EZXNjcmlwdGlvbi5jc3YiKQ0KDQpgYGANCg0KDQpgYGB7cn0NCmxpZ25lZGF0YT1jKCdYMTk5NScsICdYMTk5NicsICdYMTk5NycsICdYMTk5OCcsICdYMTk5OScsICdYMjAwMCcsICdYMjAwMScsICdYMjAwMicsICdYMjAwMycsICdYMjAwNCcsICdYMjAwNScsICdYMjAwNicsICdYMjAwNycsICdYMjAwOCcsICdYMjAwOScsICdYMjAxMCcsICdYMjAxMScsICdYMjAxMicsICdYMjAxMycsICdYMjAxNCcsICdYMjAxNScsICdYMjAxNicsICdYMjAxNycpI2xlcyBjb2xvbm5lcyBkZSBkb25uw6llcw0KZGF0ZT1zZXEoMTk5NSwgMjAxNSkNCmBgYA0KDQpgYGB7cn0NCmxpZ25lX3BheXM8LWZ1bmN0aW9uKGJhc2UsdmFyaSxjb2RlaSxwYXlzLHZhcmlhYmxlPSd2YXInKQ0Kew0KdGFibGVhdT1zdWJzZXQoYmFzZSx2YXI9PXZhcmkmIGNvZGU9PWNvZGVpKVtjKCJjb3VudHJ5IiwgbGlnbmVkYXRhKV0gDQpyb3duYW1lcyh0YWJsZWF1KTwtdGFibGVhdVssMV0NCnRhYmxlYXU8LXRhYmxlYXVbLC0xXQ0KdGFibGVhdTwtdCh0YWJsZWF1KQ0KdGFiZWxlYXU8LXRhYmxlYXVbLHBheXNdDQpkZiA8LSBkYXRhLmZyYW1lKHg9MTk5NToyMDE3LCBkYXRhLmZyYW1lKHRhYmVsZWF1KSkNCmRmLm1lbHRlZCA8LSBtZWx0KGRmLCBpZD0ieCIpDQpxcGxvdCh4PXgsIHk9dmFsdWUsIGNvbG9yPXZhcmlhYmxlLCBkYXRhPWRmLm1lbHRlZCwgZ2VvbT0ibGluZSIpKyB4bGFiKCJEYXRlIikgKyB5bGFiKHZhcmlhYmxlKQ0KfQ0KYGBgDQoNCmBgYHtyfQ0KbGlnbmVfcGF5cyggY29tcHRlLCB2YXJpPSJWQSIsIGNvZGVpPSdUT1QnLHBheXM9YygiRlIiLCAiREUiLCJVSyIsICJFUyIsICJJVCIpICkrIGdndGl0bGUoIsOpdm9sdXRpb24gZGUgbGEgcHJvZHVjdGlvbiBkYW5zIGxlcyBncmFuZHMgcGF5cyBldXJvcMOpZW5zIikgKw0KICB4bGFiKCJhbm7DqWUiKSArIHlsYWIoIlZhbGV1ciBham91dMOpZSwgZW4gbWlsbGlvbnMgZCdldXJvcy9saXZyZXMiKQ0KYGBgDQoNCmBgYHtyfQ0KbGlnbmVfcGF5cyggY29tcHRlLCB2YXJpPSJFTVAiLCBjb2RlaT0nVE9UJyxwYXlzPWMoIkZSIiwgIkRFIiwiVUsiLCAiRVMiLCAiSVQiKSApKyBnZ3RpdGxlKCLDqXZvbHV0aW9uIGRlIGwnZW1wbG9pIGRhbnMgbGVzIGdyYW5kcyBwYXlzIGV1cm9ww6llbnMiKSArDQogIHhsYWIoImFubsOpZSIpICsgeWxhYigibm9tYnJlIGQnZW1wbG9pcyBlbiBtaWxsaWVycyIpDQpgYGANCg0KYGBge3J9DQpsaWduZV9wYXlzKCBjcm9pc3MsIHZhcmk9J0xBQicsIGNvZGVpPSdUT1QnLCBwYXlzPWMoIkZSIiwgIkRFIiwgIlVLIiwgIkVTIiwgIklUIikgKSsgZ2d0aXRsZSgiw6l2b2x1dGlvbiBkdSBjb8O7dCBkdSB0cmF2YWlsIGRhbnMgbGVzIGdyYW5kcyBwYXlzIGV1cm9ww6llbnMiKSArDQogIHhsYWIoImFubsOpZSIpICsgeWxhYigiY2/Du3QgZHUgdHJhdmFpbCBlbiBtaWxsaW9ucyBkJ2V1cm9zIikNCmBgYA0KDQoNCmBgYHtyfQ0KdGFibGVhdT1zdWJzZXQoY3JvaXNzLHZhcj09J0xBQicgJiBjb2RlPT0nVE9UJyYgY291bnRyeT09J0ZSJylbbGlnbmVkYXRhXQ0KYGBgDQoNCmBgYHtyfQ0KbGlicmFyeSgidHNlcmllcyIpDQpgYGANCmBgYHtyfQ0Kc2VyaWV0ZW1wPWMobG9nKHRhYmxlYXUpKQ0KYGBgDQoNCg0KYGBge3J9DQphZGYudGVzdChjKHNlcmlldGVtcCkpDQpgYGANCg0KYGBge3J9DQpQUC50ZXN0KHNlcmlldGVtcCkNCmBgYA0KDQpgYGB7cn0NCmtwc3MudGVzdChzZXJpZXRlbXApDQpgYGANCkxlcyBkZXV4IHRlc3RzIHF1aSBtYXJjaGVudCBzb250IGNvaMOpcmVudHMoIGlscyBuJ29udCBwYXMgbGUgbcOqbWUgSF8wKSA6IGxlIGxvZyBkZSBsYSBzw6lyaWUgZGUgbCdlbXBsb2kgdG90YWwgZXN0IGJpZW4gc3RhdGlvbm5haXJlLg0KDQoNCg0K</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIlIgTm90ZWJvb2siDQpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sNCi0tLQ0KUsOpY3Vww6lyYXRpb24gZGVzIGRvbm7DqWVzDQoNCmBgYHtyfQ0KbGlicmFyeShnZ3Bsb3QyKQ0KbGlicmFyeShyZXNoYXBlMikNCmxpYnJhcnkoInRzZXJpZXMiKQ0KYGBgDQpgYGB7cn0NCmNhcGl0YWw9cmVhZC5jc3YoIkM6L1VzZXJzL3N5bHZhL0Rlc2t0b3AvZ2l0L1N0YXRhcF9jaWNlL1N0YXRpc3RpY2FsX0NhcGl0YWwuY3N2IikNCmNyb2lzcz1yZWFkLmNzdigiQzovVXNlcnMvc3lsdmEvRGVza3RvcC9naXQvU3RhdGFwX2NpY2UvU3RhdGlzdGljYWxfR3Jvd3RoLUFjY291bnRzLmNzdiIpDQp0cmF2YWlsPXJlYWQuY3N2KCJDOi9Vc2Vycy9zeWx2YS9EZXNrdG9wL2dpdC9TdGF0YXBfY2ljZS9TdGF0aXN0aWNhbF9MYWJvdXIuY3N2IikNCg0KY29tcHRlPXJlYWQuY3N2KCJDOi9Vc2Vycy9zeWx2YS9EZXNrdG9wL2dpdC9TdGF0YXBfY2ljZS9TdGF0aXN0aWNhbF9OYXRpb25hbC1BY2NvdW50cy5jc3YiKQ0KZGVzY3JpcHRpb249cmVhZC5jc3YoIkM6L1VzZXJzL3N5bHZhL0Rlc2t0b3AvZ2l0L1N0YXRhcF9jaWNlL1ZhcmlhYmxlLURlc2NyaXB0aW9uLmNzdiIpDQoNCmBgYA0KDQoNCmBgYHtyfQ0KbGlnbmVkYXRhPWMoJ1gxOTk1JywgJ1gxOTk2JywgJ1gxOTk3JywgJ1gxOTk4JywgJ1gxOTk5JywgJ1gyMDAwJywgJ1gyMDAxJywgJ1gyMDAyJywgJ1gyMDAzJywgJ1gyMDA0JywgJ1gyMDA1JywgJ1gyMDA2JywgJ1gyMDA3JywgJ1gyMDA4JywgJ1gyMDA5JywgJ1gyMDEwJywgJ1gyMDExJywgJ1gyMDEyJywgJ1gyMDEzJywgJ1gyMDE0JywgJ1gyMDE1JywgJ1gyMDE2JywgJ1gyMDE3JykjbGVzIGNvbG9ubmVzIGRlIGRvbm7DqWVzDQpkYXRlPXNlcSgxOTk1LCAyMDE1KQ0KYGBgDQoNCmBgYHtyfQ0KbGlnbmVfcGF5czwtZnVuY3Rpb24oYmFzZSx2YXJpLGNvZGVpLHBheXMsdmFyaWFibGU9J3ZhcicpDQp7DQp0YWJsZWF1PXN1YnNldChiYXNlLHZhcj09dmFyaSYgY29kZT09Y29kZWkpW2MoImNvdW50cnkiLCBsaWduZWRhdGEpXSANCnJvd25hbWVzKHRhYmxlYXUpPC10YWJsZWF1WywxXQ0KdGFibGVhdTwtdGFibGVhdVssLTFdDQp0YWJsZWF1PC10KHRhYmxlYXUpDQp0YWJlbGVhdTwtdGFibGVhdVsscGF5c10NCmRmIDwtIGRhdGEuZnJhbWUoeD0xOTk1OjIwMTcsIGRhdGEuZnJhbWUodGFiZWxlYXUpKQ0KZGYubWVsdGVkIDwtIG1lbHQoZGYsIGlkPSJ4IikNCnFwbG90KHg9eCwgeT12YWx1ZSwgY29sb3I9dmFyaWFibGUsIGRhdGE9ZGYubWVsdGVkLCBnZW9tPSJsaW5lIikrIHhsYWIoIkRhdGUiKSArIHlsYWIodmFyaWFibGUpDQp9DQpgYGANCg0KYGBge3J9DQpsaWduZV9wYXlzKCBjb21wdGUsIHZhcmk9IlZBIiwgY29kZWk9J1RPVCcscGF5cz1jKCJGUiIsICJERSIsIlVLIiwgIkVTIiwgIklUIikgKSsgZ2d0aXRsZSgiw6l2b2x1dGlvbiBkZSBsYSBwcm9kdWN0aW9uIGRhbnMgbGVzIGdyYW5kcyBwYXlzIGV1cm9ww6llbnMiKSArDQogIHhsYWIoImFubsOpZSIpICsgeWxhYigiVmFsZXVyIGFqb3V0w6llLCBlbiBtaWxsaW9ucyBkJ2V1cm9zL2xpdnJlcyIpDQpgYGANCg0KYGBge3J9DQpsaWduZV9wYXlzKCBjb21wdGUsIHZhcmk9IkVNUCIsIGNvZGVpPSdUT1QnLHBheXM9YygiRlIiLCAiREUiLCJVSyIsICJFUyIsICJJVCIpICkrIGdndGl0bGUoIsOpdm9sdXRpb24gZGUgbCdlbXBsb2kgZGFucyBsZXMgZ3JhbmRzIHBheXMgZXVyb3DDqWVucyIpICsNCiAgeGxhYigiYW5uw6llIikgKyB5bGFiKCJub21icmUgZCdlbXBsb2lzIGVuIG1pbGxpZXJzIikNCmBgYA0KDQpgYGB7cn0NCmxpZ25lX3BheXMoIGNyb2lzcywgdmFyaT0nTEFCJywgY29kZWk9J1RPVCcsIHBheXM9YygiRlIiLCAiREUiLCAiVUsiLCAiRVMiLCAiSVQiKSApKyBnZ3RpdGxlKCLDqXZvbHV0aW9uIGR1IGNvw7t0IGR1IHRyYXZhaWwgZGFucyBsZXMgZ3JhbmRzIHBheXMgZXVyb3DDqWVucyIpICsNCiAgeGxhYigiYW5uw6llIikgKyB5bGFiKCJjb8O7dCBkdSB0cmF2YWlsIGVuIG1pbGxpb25zIGQnZXVyb3MiKQ0KYGBgDQoNCg0KYGBge3J9DQp0YWJsZWF1PXN1YnNldChjcm9pc3MsdmFyPT0nTEFCJyAmIGNvZGU9PSdUT1QnJiBjb3VudHJ5PT0nRlInKVtsaWduZWRhdGFdDQpzZXJpZXRlbXA9Yyhsb2codGFibGVhdSkpDQpgYGANCg0KDQpgYGB7cn0NCmFkZi50ZXN0KHNlcmlldGVtcCkNCmBgYA0KDQoNCg0KYGBge3J9DQpzZXJpZXRlbXBudW09YXMubnVtZXJpYyhzZXJpZXRlbXApDQpQUC50ZXN0KHNlcmlldGVtcG51bSkNCmBgYA0KDQpgYGB7cn0NCmtwc3MudGVzdChzZXJpZXRlbXApDQpgYGANCkxlcyB0cm9pcyB0ZXN0cyBzb250IGNvaMOpcmVudHMoIGlscyBuJ29udCBwYXMgbGUgbcOqbWUgSF8wKSA6IGxlIGxvZyBkZSBsYSBzw6lyaWUgZGUgbCdlbXBsb2kgdG90YWwgZW4gRnJhbmNlIGVzdCBiaWVuIHN0YXRpb25uYWlyZS4NCg0KDQoNCg==</div>
 
 
 
