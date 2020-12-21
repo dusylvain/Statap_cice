@@ -7,6 +7,7 @@ Récupération des données
 ```{r}
 library(ggplot2)
 library(reshape2)
+library("tseries")
 ```
 ```{r}
 capital=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Capital.csv")
@@ -56,28 +57,25 @@ ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"
 
 ```{r}
 tableau=subset(croiss,var=='LAB' & code=='TOT'& country=='FR')[lignedata]
-```
-
-```{r}
-library("tseries")
-```
-```{r}
 serietemp=c(log(tableau))
 ```
 
 
 ```{r}
-adf.test(c(serietemp))
+adf.test(serietemp)
 ```
 
+
+
 ```{r}
-PP.test(serietemp)
+serietempnum=as.numeric(serietemp)
+PP.test(serietempnum)
 ```
 
 ```{r}
 kpss.test(serietemp)
 ```
-Les deux tests qui marchent sont cohérents( ils n'ont pas le même H_0) : le log de la série de l'emploi total est bien stationnaire.
+Les trois tests sont cohérents( ils n'ont pas le même H_0) : le log de la série de l'emploi total en France est bien stationnaire.
 
 
 
