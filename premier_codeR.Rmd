@@ -55,6 +55,11 @@ ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"
 ```
 
 
+
+###Tests unitaires###
+
+Les tests pour une variable :
+
 ```{r}
 tableau=subset(croiss,var=='LAB' & code=='TOT'& country=='FR')[lignedata]
 serietemp=c(log(tableau))
@@ -66,7 +71,6 @@ adf.test(serietemp)
 ```
 
 
-
 ```{r}
 serietempnum=as.numeric(serietemp)
 PP.test(serietempnum)
@@ -75,7 +79,52 @@ PP.test(serietempnum)
 ```{r}
 kpss.test(serietemp)
 ```
+
 Les trois tests sont cohérents( ils n'ont pas le même H_0) : le log de la série de l'emploi total en France est bien stationnaire.
+
+
+Les fonctions généralisant les tests :
+
+
+```{r}
+prepadonnees<- function(base, vari, codei){
+tableau=subset(base,var==vari & code==codei)[c("country", lignedata)] 
+rownames(tableau)<-tableau[,1]
+tableau<-tableau[,-1]
+tableau<-t(tableau)
+tableau=data.frame(tableau)
+tableau
+}
+
+tableau=prepadonnees(croiss, 'LAB', 'TOT')
+```
+
+
+```{r}
+multi_stat_tests<- function(tableau){
+    p <- ncol(tableau)
+    df_multi <- data.frame(var=names(tableau),
+adf.pvalue=sapply(tableau, function(x) adf.test(x[!is.na(x)],alternative = "stationary")$p.value),
+kpss.pvalue=sapply(tableau, function(x) kpss.test(x[!is.na(x)])$p.value),
+PP.pvalue=sapply(tableau, function(x) PP.test(x[!is.na(x)])$p.value)
+                           )
+    df_multi$adf <- df_multi$adf.pvalue < 0.05
+    df_multi$kpss <- df_multi$kpss.pvalue < 0.05
+    df_multi$PP <- df_multi$PP.pvalue < 0.05
+    df_multi
+}
+multi_stat_tests(tableau)
+```
+```{r}
+
+multi_stat_tests(prepadonnees(compte, 'VA', 'TOT'))
+multi_stat_tests(prepadonnees(compte, 'EMP', 'TOT'))
+```
+
+
+
+
+
 
 
 
