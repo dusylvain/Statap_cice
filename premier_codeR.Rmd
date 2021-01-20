@@ -10,12 +10,12 @@ library(reshape2)
 library("tseries")
 ```
 ```{r}
-capital=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Capital.csv")
-croiss=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Growth-Accounts.csv")
-travail=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_Labour.csv")
+capital=read.csv("Statistical_Capital.csv")
+croiss=read.csv("Statistical_Growth-Accounts.csv")
+travail=read.csv("Statistical_Labour.csv")
 
-compte=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Statistical_National-Accounts.csv")
-description=read.csv("C:/Users/sylva/Desktop/git/Statap_cice/Variable-Description.csv")
+compte=read.csv("Statistical_National-Accounts.csv")
+description=read.csv("Variable-Description.csv")
 
 ```
 
@@ -60,31 +60,37 @@ ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"
 
 Les tests pour une la France :
 
+#####Le niveau d'emploi français (var= LAB)
 ```{r}
+
 tableau=subset(croiss,var=='LAB' & code=='TOT'& country=='FR')[lignedata]
 serietemp=c(log(tableau))
 ```
 
-
+#Test de Dickey Fuller
 ```{r}
 adf.test(serietemp)
 ```
-
-
+Ici H_0 est : 'non stationnaire' : la p-value est de 96%, on rejette donc l'hypothèse nulle (celle-ci) à 5%.
+Donc, la série est stationnaire. 
+#Test de Philipps Perron
 ```{r}
 serietempnum=as.numeric(serietemp)
 PP.test(serietempnum)
 ```
-
+Ici H_0 est : 'non stationnaire' : la p-value est de 99%, on rejette donc l'hypothèse nulle (celle-ci) à 1%.
+Donc, la série est stationnaire. 
+#Test KPSS
 ```{r}
 kpss.test(serietemp)
 ```
+Ici H_0 est : 'stationnaire' : la p-value est de 0.01%, on ne rejette donc pas l'hypothèse nulle (celle-ci) à 1%.
+Donc, la série est stationnaire. 
 
 Les trois tests sont cohérents( ils n'ont pas le même H_0) : le log de la série de l'emploi total en France est bien stationnaire.
 
 
-Les fonctions généralisant les tests : 
-Il reste à les mettre en log !
+#Fonction généralisant les tests : 
 
 
 ```{r}
@@ -98,6 +104,7 @@ tableau
 }#cette fonction permet de créer la database sur laquelle faire les tests
 
 tableau=prepadonnees(croiss, 'LAB', 'TOT')
+#En ligne il y a les années et en colonne les valeurs 
 ```
 
 
@@ -105,24 +112,28 @@ tableau=prepadonnees(croiss, 'LAB', 'TOT')
 multi_stat_tests<- function(tableau){
     p <- ncol(tableau)
     df_multi <- data.frame(var=names(tableau),
-adf.pvalue=sapply(tableau, function(x) adf.test(log(x)[!is.na(x)],alternative = "stationary")$p.value),#on fait un test par colonne
-kpss.pvalue=sapply(tableau, function(x) kpss.test(log(x)[!is.na(x)])$p.value),
-PP.pvalue=sapply(tableau, function(x) PP.test(log(x)[!is.na(x)])$p.value)
+    adf.pvalue=sapply(tableau, function(x) adf.test(log(x)[!is.na(x)],alternative = "stationary")$p.value),#on fait un test par colonne
+    kpss.pvalue=sapply(tableau, function(x) kpss.test(log(x)[!is.na(x)])$p.value),
+    PP.pvalue=sapply(tableau, function(x) PP.test(log(x)[!is.na(x)])$p.value)
                            )
     df_multi$adf <- df_multi$adf.pvalue < 0.05
-    df_multi$kpss <- df_multi$kpss.pvalue < 0.05#son H_O est différent donc ce n'est pas ça qu'on cherche en réalité (je crois)
-    df_multi$PP <- df_multi$PP.pvalue < 0.05
+    df_multi$kpss <- df_multi$kpss.pvalue > 0.95
+    df_multi$PP <- df_multi$PP.pvalue <0.05
     df_multi
 }
 ```
 ```{r}
-multi_stat_tests(prepadonnees(croiss, 'LAB', 'TOT'))
-multi_stat_tests(prepadonnees(compte, 'VA', 'TOT'))
+#multi_stat_tests(prepadonnees(croiss, 'LAB', 'TOT'))
+#multi_stat_tests(prepadonnees(compte, 'VA', 'TOT'))
 multi_stat_tests(prepadonnees(compte, 'EMP', 'TOT'))
 ```
 
 
 
+```{r}
+ligne_pays( compte, vari="EMP", codei='TOT',pays=c("BG") )+ ggtitle("évolution de l'emploi dans les grands pays européens") +
+  xlab("année") + ylab("nombre d'emplois en milliers")
+```
 
 
 
