@@ -4,8 +4,8 @@ output:
   html_document:
     df_print: paged
 ---
-Récupération des données
 
+Packages
 ```{r}
 library(ggplot2)
 library(reshape2)
@@ -13,6 +13,7 @@ library("tseries")
 library(forecast)
 library(dplyr)
 ```
+Récupération des données
 ```{r}
 capital=read.csv("Statistical_Capital.csv")
 croiss=read.csv("Statistical_Growth-Accounts.csv")
@@ -27,10 +28,10 @@ autre_pays=read.csv("WB_data.csv")
 
 
 ```{r}
-lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
 date=seq(1995, 2015)
 ```
-
+Fonction permettant de tracer des courbes sur les évolutions dans les pays.
 ```{r}
 ligne_pays<-function(base,vari,codei,pays,variable='var',diff=0)
 {
@@ -41,7 +42,7 @@ print(tableau)
 tableau<-t(tableau)
 tabeleau<-tableau[,pays]
 i<-0
-while (i<diff){
+while (i<diff){#diff correspond au nombre de retards qui nous intéressent
   tabeleau=diff(tabeleau)
   i<-i+1
 } 
@@ -139,10 +140,10 @@ multi_stat_tests<- function(tableau){
     kpss.pvalue=sapply(tableau, function(x) kpss.test(x[!is.na(x)])$p.value),
     PP.pvalue=sapply(tableau, function(x) PP.test(x[!is.na(x)])$p.value)
                            )
-    df_multi$adf <- df_multi$adf.pvalue < 0.05
+    df_multi$adf <- df_multi$adf.pvalue < 0.05#on compare la p-value avec 5%
     df_multi$kpss <- df_multi$kpss.pvalue > 0.05
     df_multi$PP <- df_multi$PP.pvalue <0.05
-    df_multi$nb_stationnarite <- sapply(tableau, function(x) forecast::ndiffs(x[!is.na(x)], test = "kpss"))
+    df_multi$nb_stationnarite <- sapply(tableau, function(x) forecast::ndiffs(x[!is.na(x)], test = "kpss"))#on regarde le nombre de retards nécessaires pour que la série soit stationnaire
     df_multi
 }
 ```
