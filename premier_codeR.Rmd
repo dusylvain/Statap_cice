@@ -22,7 +22,7 @@ travail=read.csv("Statistical_Labour.csv")
 compte=read.csv("Statistical_National-Accounts.csv")
 description=read.csv("Variable-Description.csv")
 
-autre_pays=read.csv("WB_data.csv")
+autre_pays=read.csv("WB_data2.csv")
 
 ```
 
@@ -161,8 +161,8 @@ Il faut au plus deux retards pour rendre ces séries stationnaires, quel que soi
 
 
 ```{r}
-multi_stat_tests(diff(diff(prepadonnees(compte, 'VA', 'TOT'))))#le PIB
-multi_stat_tests(diff(diff(prepadonnees(compte, 'EMP', 'TOT'))))#le niveau d'emploi
+multi_stat_tests(diff(diff(prepadonnees(compte, 'VA', 'TOT'))))#le PIB avec un double retard
+multi_stat_tests(diff(diff(prepadonnees(compte, 'EMP', 'TOT'))))#le niveau d'emploi avec un double retard
 ```
 
 Ici aussi, l'interprétation doit se faire avec soin : un TRUE dans adf et PP signifie : on rejette l'absence de stationnarité (on est donc sûr que la série est stationnaire), tandis qu'un TRUE dans kpss signifie : on ne rejette pas la stationnarité.
@@ -173,16 +173,6 @@ ligne_pays( compte, vari="VA", codei='TOT',pays=c("FR"), diff=1 )+ ggtitle("évo
 ```
 
 ###Les autres pays
-```{r}
-autre_pays$Indicator.Simple[autre_pays$Indicator.Name == "Exports of goods and services (current US$)"] <- "Export"
-autre_pays$Indicator.Simple[autre_pays$Indicator.Name == "GDP (current US$)"] <- "GDP"
-autre_pays$Indicator.Simple[autre_pays$Indicator.Name == "GDP per capita (current US$)"] <- "GDP per capita"
-autre_pays$Indicator.Simple[autre_pays$Indicator.Name == "Gross capital formation (% of GDP)"] <- "Capital formation"
-autre_pays$Indicator.Simple[autre_pays$Indicator.Name == "Unemployment, total (% of total labor force) (modeled ILO estimate)"] <- "Unemployment"
-head(autre_pays)
-
-```
-
 
 
 ```{r}
@@ -193,13 +183,13 @@ rownames(tableau)<-tableau[,1]
 tabeleau<-t(tableau[,-1])[,pays]
 
 
-tableau_sup=subset(autre_pays,Indicator.Simple==varbis)[c("Country.Code",lignedata[c(6:23)])]
+tableau_sup=subset(autre_pays,Indicator.Simple==varbis)[c("Country.Code",lignedata)]
 rownames(tableau_sup)<-tableau_sup[,1]
 tabeleau_sup<-t(tableau_sup[,-1])[,paysbis]/echelle
 
 
 df <- data.frame(x=(1995):2017, data.frame(tabeleau))
-df2 <- data.frame(x=(2000):2017, data.frame(tabeleau_sup))
+df2 <- data.frame(x=(1995):2017, data.frame(tabeleau_sup))
 
 df<-full_join(df,df2,by="x")
 
@@ -207,15 +197,10 @@ df<-full_join(df,df2,by="x")
 df.melted <- melt(df, id="x")
 qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") + ylab(variable)
 }
-ligne_pays_bis( compte, vari='VA', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"), variable='Valeur ajoutée', varbis="GDP", paysbis=c("AGO","ALB",'FRA'), echelle=10**6 )
+ligne_pays_bis( compte, vari='VA', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"), variable='Valeur ajoutée', varbis="gdp", paysbis=c('FRA'), echelle=10**6 )
 ```
 
 
 
-
-
-```{r}
-lignedata[c(6:18)]
-```
 
 
