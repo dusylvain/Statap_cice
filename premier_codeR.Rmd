@@ -183,7 +183,7 @@ rownames(tableau)<-tableau[,1]
 tabeleau<-t(tableau[,-1])[,pays]
 
 
-tableau_sup=subset(autre_pays,Indicator.Simple==varbis)[c("Country.Code",lignedata)]
+tableau_sup=subset(autre_pays,Simple.Indicator==varbis)[c("Country.Code",lignedata)]
 rownames(tableau_sup)<-tableau_sup[,1]
 tabeleau_sup<-t(tableau_sup[,-1])[,paysbis]/echelle
 
