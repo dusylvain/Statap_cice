@@ -126,8 +126,8 @@ tableau
 }#cette fonction permet de créer la database sur laquelle faire les tests
 
 tableau=prepadonnees(croiss, 'LAB', 'TOT')
-#En ligne il y a les années et en colonne les valeurs 
-tableau
+#En ligne il y a les années et en colonne les pays 
+head(tableau)
 ```
 
 
@@ -202,9 +202,9 @@ df<-full_join(df,df2,by="x")
 df.melted <- melt(df, id="x")
 qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") + ylab(variable)
 }
-ligne_pays_bis( compte, vari='VA', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"), variable='Valeur ajoutée', varbis="GDP", paysbis=c("AGO","ALB"), echelle=10**5 )
+ligne_pays_bis( compte, vari='VA', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT"), variable='Valeur ajoutée', varbis="GDP", paysbis=c("AGO","ALB",'FRA'), echelle=10**6 )
 ```
-Attention, les données WB sont en milliards et les EU Klems en billions !
+Attention, les données WB sont en milliards et les EU Klems en billions ! (en cours de changement)
 
 
 
