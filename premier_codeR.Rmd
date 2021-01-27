@@ -86,7 +86,7 @@ serietemp=c(log(tableau))#on crée la série voulue
 adf.test(serietemp)
 ```
 Ici H_0 est : 'non stationnaire' : la p-value est de 94%, on ne rejette donc pas l'hypothèse nulle (celle-ci) à 5%.
-Donc, la série est stationnaire. 
+Donc, la série est non stationnaire. 
 #Test de Philipps Perron
 ```{r}
 serietempnum=as.numeric(serietemp)
@@ -110,7 +110,7 @@ forecast::ndiffs(serietempnum, test = "pp")
 plot(diff(diff(serietempnum)))
 pp.test(diff(diff(serietempnum)))
 ```
-
+Le test de Philipps-Peron donne bien que la série est stationnaire d'ordre 2.
 
 
 #Fonction généralisant les tests : 
@@ -157,7 +157,7 @@ multi_stat_tests(prepadonnees(compte, 'VA', 'TOT'))#le PIB
 multi_stat_tests(prepadonnees(compte, 'EMP', 'TOT'))#le niveau d'emploi
 ```
 
-Il faut au plus deux retards pour rendre ces séries stationnaires, quel que soit le test considéré. A noter que False dans la colonne adf ou PP corespond à : on ne rejette pas l'absence de stationnarité (=possilement pas stationnaire), alors que False dans kpss rejette la stationnarité directement (le tout à 5%, et car on a inversé les réponses pour kpss).
+Il faut au plus deux retards pour rendre ces séries stationnaires, quel que soit le test considéré. A noter que False dans la colonne adf ou PP corespond à : on ne rejette pas l'absence de stationnarité (= possilement pas stationnaire), alors que False dans kpss rejette la stationnarité directement (le tout à 5%, et car on a inversé les réponses pour kpss).
 
 
 ```{r}
