@@ -54,7 +54,7 @@ qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") +
 
 
 ```{r}
-ligne_pays( compte, vari="VA", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de la production dans les grands pays européens") +
+ligne_pays( compte, vari="VA", codei='VA',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de la production dans les grands pays européens") +
   xlab("année") + ylab("Valeur ajoutée, en millions d'euros/livres")
 ```
 

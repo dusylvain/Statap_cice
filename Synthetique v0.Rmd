@@ -1,0 +1,77 @@
+```{r}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library("Synth")
+library(tidyverse)
+
+```
+```{r}
+capital=read.csv("Statistical_Capital.csv")
+croiss=read.csv("Statistical_Growth-Accounts.csv")
+travail=read.csv("Statistical_Labour.csv")
+
+compte=read.csv("Statistical_National-Accounts.csv")
+description=read.csv("Variable-Description.csv")
+
+autre_pays=read.csv("WB_data2.csv")
+```
+
+```{r}
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
+date=seq(2000, 2017)
+```
+Fonction permettant de tracer des courbes sur les évolutions dans les pays.
+```{r}
+melt_ada <- function(vari,codei){
+tableau=subset(compte,(var==vari)& code==codei)[c("country", lignedata,"var")]
+indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
+tableau=tableau[-indligneNA,]
+df.melted <- melt(tableau,id=c('country','var'))
+df.melted$temps=as.numeric(str_sub(df.melted$variable, 2, 5))
+
+return (df.melted[-3])
+}
+melt_ada('EMP','TOT')
+```
+
+
+```{r}
+df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","temps"))
+df.melted$index=c(1:length((unique(df.melted$country))))
+df.melted$value.x=as.numeric(df.melted$value.x)
+df.melted
+```
+
+```{r}
+ dataprep.out=Synth::dataprep(foo=df.melted,
+                predictors = c("value.x","value.y"), #Les variables utilisé en contrôle
+                predictors.op = "median", #La manière dont on les prends en compte
+                time.predictors.prior = 2000:2012, #période pré-traitement
+                dependent="value.x", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 12, # n° de l'unité traitée
+                controls.identifier = c(1:11,13:26), #n° des unités de contrôles
+                time.variable = 'temps', #colonne ou se trouve la date
+                time.optimize.ssr = 2000:2012, #période de maximisation
+                time.plot=1995:2017) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+```
+
+```{r}
+dataprep.out$X1
+#dataprep.out$X0
+```
+
+```{r}
+ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
+ synth.res = synth.out)
+
+synth.tables$tab.w
+```
+
