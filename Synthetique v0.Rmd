@@ -40,20 +40,21 @@ melt_ada('EMP','TOT')
 df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","temps"))
 df.melted$index=c(1:length((unique(df.melted$country))))
 df.melted$value.x=as.numeric(df.melted$value.x)
+df.melted$country=as.character(df.melted$country)
 df.melted
 ```
 
 ```{r}
  dataprep.out=Synth::dataprep(foo=df.melted,
-                predictors = c("value.x","value.y"), #Les variables utilisé en contrôle
-                predictors.op = "median", #La manière dont on les prends en compte
-                time.predictors.prior = 2000:2012, #période pré-traitement
+                predictors = c("value.x","value.y"), #Les variables utilisées en contrôle
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
                 dependent="value.x", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 12, # n° de l'unité traitée
                 controls.identifier = c(1:11,13:26), #n° des unités de contrôles
-                time.variable = 'temps', #colonne ou se trouve la date
+                time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
                 time.plot=1995:2017) #période tracée sur le graphique
 
@@ -62,6 +63,8 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 ```
+
+
 
 ```{r}
 dataprep.out$X1
