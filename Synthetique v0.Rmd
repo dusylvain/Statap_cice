@@ -4,7 +4,8 @@ library(reshape2)
 library(dplyr)
 library("Synth")
 library(tidyverse)
-
+library(numDeriv)
+library('alabama')
 ```
 ```{r}
 capital=read.csv("Statistical_Capital.csv")
@@ -65,10 +66,13 @@ Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend
 ```
 
 
-
 ```{r}
-dataprep.out$X1
-#dataprep.out$X0
+#dataprep.out$X1
+dataprep.out$X0
+```
+```{r}
+#dataprep.out$X1
+dataprep.out$X0
 ```
 
 ```{r}
@@ -78,3 +82,46 @@ dataprep.out$X1
 synth.tables$tab.w
 ```
 
+###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
+
+Préparation des donnnées pour l'optimisation
+```{r}
+
+Xt=subset(df.melted, country=='FR'& temps<2013 &temps>1999)
+Xt=Xt$value.x#on récupère les données pour la France
+Xn=subset(df.melted, temps<2013 &temps>1999)
+Xn=matrix(Xn$value.x, nrow=26)
+Xn=Xn[c(1:11, 13:26),]#on récupère les autres
+```
+```{r}
+x0=c(rep(1/25,25))#on crée un vecteur de départ au hasard
+f=function(x){norm(Xt-x%*%Xn, type="2")}
+n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
+q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
+opti=auglag(x0, f, hin=n, heq=q)#fonction d'optimisation sur toute la période
+opti$par=matrix(opti$par, nrow=1)#on transforme les poids trouvés en matrice
+```
+
+
+```{r}
+ dataprep.out=Synth::dataprep(foo=df.melted,
+                predictors = c("value.x"), #Les variables utilisées en contrôle
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2000:2012, #période pré-traitement
+                dependent="value.x", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 12, # n° de l'unité traitée
+                controls.identifier = c(1:11,13:26), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 2000:2012, #période de maximisation
+                time.plot=1995:2017) #période tracée sur le graphique
+
+dataprep.variables.v=opti$par#on remplace le X0 par les poids qu'on a trouvé
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+```
+Il y a visiblement des choses à améliorer !
