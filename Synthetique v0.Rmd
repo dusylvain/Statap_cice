@@ -105,6 +105,40 @@ optix=calculpoids(df.melted, 'value.x')
 
 
 ```{r}
+
+special=list()
+#Version avec les différentes dates version Synth
+dataprep.out=Synth::dataprep(foo=df.melted,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                special.predictors = list(list("value.x",1999,"mean"),
+                                           list("value.x",2001,"mean"),
+                                           list("value.x",2003,"mean"),
+                                           list("value.x",2005,"mean"),
+                                           list("value.x",2007,"mean"),
+                                           list("value.x",2009,"mean"),
+                                           list("value.y",1999,"mean"),
+                                           list("value.y",2001,"mean"),
+                                           list("value.y",2003,"mean"),
+                                           list("value.y",2005,"mean"),
+                                           list("value.y",2007,"mean"),
+                                           list("value.y",2009,"mean")
+                                           ),
+                dependent="value.x", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 12, # n° de l'unité traitée
+                controls.identifier = c(1:11,13:26), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 1999:2012, #période de maximisation
+                time.plot=1995:2017) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+
+#Version sans les différentes dates
 dataprep.out=Synth::dataprep(foo=df.melted,
                 predictors = c("value.x","value.y"), #Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
@@ -115,15 +149,13 @@ dataprep.out=Synth::dataprep(foo=df.melted,
                 treatment.identifier = 12, # n° de l'unité traitée
                 controls.identifier = c(1:11,13:26), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2012, #période de maximisation
+                time.optimize.ssr = 1999:2012, #période de maximisation
                 time.plot=1995:2017) #période tracée sur le graphique
-
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-
-
+#version a la mano
 synth.out$solution.w=optix#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
@@ -160,6 +192,35 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 
+dataprep.out=Synth::dataprep(foo=df.melted,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                special.predictors = list(list("value.x",1999,"mean"),
+                                           list("value.x",2001,"mean"),
+                                           list("value.x",2003,"mean"),
+                                           list("value.x",2005,"mean"),
+                                           list("value.x",2007,"mean"),
+                                           list("value.x",2009,"mean"),
+                                           list("value.y",1999,"mean"),
+                                           list("value.y",2001,"mean"),
+                                           list("value.y",2003,"mean"),
+                                           list("value.y",2005,"mean"),
+                                           list("value.y",2007,"mean"),
+                                           list("value.y",2009,"mean")
+                                           ),
+                dependent="value.y", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 12, # n° de l'unité traitée
+                controls.identifier = c(1:11,13:26), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 1999:2012, #période de maximisation
+                time.plot=1995:2017) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 
 synth.out$solution.w=optiy#on remplace les poids par ceux calculés
 
@@ -173,4 +234,5 @@ Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend
  synth.res = synth.out)
 
 synth.tables$tab.w
+synth.tables$tab.v
 ```
