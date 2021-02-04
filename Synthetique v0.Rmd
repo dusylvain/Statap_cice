@@ -17,12 +17,12 @@ description=read.csv("Variable-Description.csv")
 
 autre_pays=read.csv("WB_data2.csv")
 ```
-
+#les lignes avec des données
 ```{r}
 lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
 date=seq(2000, 2017)
 ```
-Fonction permettant de tracer des courbes sur les évolutions dans les pays.
+#fonction qui permet de récupérer des dataframes utilisables sur une donnée
 ```{r}
 melt_ada <- function(vari,codei){
 tableau=subset(compte,(var==vari)& code==codei)[c("country", lignedata,"var")]
@@ -40,11 +40,11 @@ melt_ada('EMP','TOT')
 ```{r}
 df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","temps"))
 df.melted$index=c(1:length((unique(df.melted$country))))
-df.melted$value.x=as.numeric(df.melted$value.x)
+df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
 df.melted$country=as.character(df.melted$country)
 df.melted
 ```
-
+###La fonction de base
 ```{r}
  dataprep.out=Synth::dataprep(foo=df.melted,
                 predictors = c("value.x","value.y"), #Les variables utilisées en contrôle
@@ -62,19 +62,16 @@ df.melted
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 ```
 
 
-```{r}
-#dataprep.out$X1
-dataprep.out$variables.v
-```
+
 ```{r}
 #dataprep.out$X1
 dataprep.out$X0
 ```
-
+###Les poids utilisés
 ```{r}
  synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
  synth.res = synth.out)
@@ -87,22 +84,25 @@ synth.tables$tab.w
 
 Préparation des donnnées pour l'optimisation
 ```{r}
-
+calculpoids=function(df.melted, value){
+  #préparation des données
 Xt=subset(df.melted, country=='FR'& temps<2013 &temps>1999)
-Xt=Xt$value.x#on récupère les données pour la France
+Xt=Xt[,value]#on récupère les données pour la France
 Xn=subset(df.melted, temps<2013 &temps>1999)
-Xn=matrix(Xn$value.x, nrow=26)
+Xn=matrix(Xn[,value], nrow=26)
 Xn=Xn[c(1:11, 13:26),]#on récupère les autres
-```
-```{r}
+#la fonction d'optimisation
 x0=c(rep(1/25,25))#on crée un vecteur de départ au hasard
 f=function(x){norm(Xt-x%*%Xn, type="2")}
 n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
 q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
 opti=auglag(x0, f, hin=n, heq=q)#fonction d'optimisation sur toute la période
-matrix(opti$par, ncol=1)
-
+opti$par=matrix(opti$par, ncol=1)}
 ```
+```{r}
+optix=calculpoids(df.melted, 'value.x')
+```
+
 
 ```{r}
 dataprep.out=Synth::dataprep(foo=df.melted,
@@ -121,13 +121,13 @@ dataprep.out=Synth::dataprep(foo=df.melted,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 
 
-synth.out$solution.w=opti$par#on remplace les poids par ceux calculés
+synth.out$solution.w=optix#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 ```
 
 ```{r}
@@ -136,23 +136,41 @@ Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend
 
 synth.tables$tab.w
 ```
-
+###Pour l'emploi
 ```{r}
-calculpoids=function(df.melted){
-Xt=subset(df.melted, country=='FR'& temps<2013 &temps>1999)
-Xt=Xt$value.y#on récupère les données pour la France
-Xn=subset(df.melted, temps<2013 &temps>1999)
-Xn=matrix(Xn$value.y, nrow=26)
-Xn=Xn[c(1:11, 13:26),]#on récupère les autres
-
-x0=c(rep(1/25,25))#on crée un vecteur de départ au hasard
-f=function(x){norm(Xt-x%*%Xn, type="2")}
-n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
-q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
-opti=auglag(x0, f, hin=n, heq=q)#fonction d'optimisation sur toute la période
-matrix(opti$par, ncol=1)}
-```
-```{r}
-calculpoids(df.melted)
+optiy=calculpoids(df.melted, 'value.y')
 ```
 
+```{r}
+dataprep.out=Synth::dataprep(foo=df.melted,
+                predictors = c("value.x","value.y"), #Les variables utilisées en contrôle
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                dependent="value.y", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 12, # n° de l'unité traitée
+                controls.identifier = c(1:11,13:26), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 2000:2012, #période de maximisation
+                time.plot=1995:2017) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+
+
+synth.out$solution.w=optiy#on remplace les poids par ceux calculés
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+```
+
+
+```{r}
+ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
+ synth.res = synth.out)
+
+synth.tables$tab.w
+```
