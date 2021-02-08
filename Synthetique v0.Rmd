@@ -16,6 +16,8 @@ compte=read.csv("Statistical_National-Accounts.csv")
 description=read.csv("Variable-Description.csv")
 
 autre_pays=read.csv("WB_data2.csv")
+pays2lettres=read.csv('liste_pays_2lettres.csv')
+pays3lettres=read.csv('liste_pays_3lettres.csv')
 ```
 #les lignes avec des données
 ```{r}
@@ -51,7 +53,7 @@ df.W=inner_join(melt_ada('COMP','TOT'), melt_ada("VA_PI",'TOT'),by=c("country","
 df.W=inner_join(df.W, melt_ada("H_EMPE",'TOT'),by=c("country","temps"))
 df.W$index=c(1:length((unique(df.W$country))))
 df.W$country=as.character(df.W$country)
-df.W$W=(df.W$value.x*100/df.W$value.y)/df.W$value
+df.W$W=(df.W$value.x*100/df.W$value.y)*1000/df.W$value#le nombre d'heures travaillées est en milliers
 df.W$value.x=as.numeric(df.W$W)
 df.W=df.W[,c('country','W', 'temps')]
 df.W
@@ -315,7 +317,7 @@ for(i in liste_value ){
   }
 }
 liste=as.list(liste)
-ind_pays=which(df.melted2$country==pays)[1]
+ind_pays=which(df.melt$country==pays)[1]
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors.op = "mean", #La manière dont on les prend en compte
@@ -325,7 +327,7 @@ dataprep.out=Synth::dataprep(foo=df.melt,
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melted2$index))[-ind_pays], #n° des unités de contrôles
+                controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 1999:2012, #période de maximisation
                 time.plot=1995:2017) #période tracée sur le graphique
@@ -344,7 +346,7 @@ dataprep.out=Synth::dataprep(foo=df.melt,
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melted2$index))[-ind_pays], #n° des unités de contrôles
+                controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 1999:2012, #période de maximisation
                 time.plot=1995:2017) #période tracée sur le graphique
@@ -409,4 +411,6 @@ Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.po
 synth.out$solution.v
 synth.out$solution.w
 ```
+
+
 
