@@ -30,7 +30,7 @@ indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
 tableau=tableau[-indligneNA,]
 df.melted <- melt(tableau,id=c('country','var'))
 df.melted$temps=as.numeric(str_sub(df.melted$variable, 2, 5))
-
+df.melted$country=as.character(df.melted$country)
 return (df.melted[-3])
 }
 melt_ada('EMP','TOT')
@@ -130,13 +130,23 @@ synth.tables$tab.w
 
 Préparation des donnnées pour l'optimisation
 ```{r}
+quiet <- function(x) { 
+  sink(tempfile()) 
+  on.exit(sink()) 
+  invisible(force(x)) 
+} 
+
+```
+
+```{r}
 calculpoids=function(df.melted, value, pays='FR'){
   #préparation des données
 pays_autres=max(df.melted$index)
 Xt=subset(df.melted, country==pays& temps<2013 &temps>1999)
 Xt=Xt[,value]#on récupère les données pour la France
-Xn=Xn[Xn$country!=pays]#on récupère les autres
+
 Xn=subset(df.melted, temps<2013 &temps>1999)
+Xn=Xn[Xn$country!=pays,]#on récupère les autres
 Xn=matrix(Xn[,value], nrow=pays_autres)
 
 #la fonction d'optimisation
@@ -149,10 +159,7 @@ opti=auglag(x0, f, hin=n, heq=q)#fonction d'optimisation sur toute la période
 opti$par=matrix(opti$par, ncol=1)}
 ```
 ```{r}
-optix=calculpoids(df.melted, 'value.x')
-```
-```{r}
-1!=0
+optix=quiet(calculpoids(df.melted, 'value.x'))
 ```
 
 
@@ -222,7 +229,7 @@ synth.tables$tab.w
 ```
 ###Pour l'emploi
 ```{r}
-optiy=calculpoids(df.melted, 'value.y')
+optiy=quiet(calculpoids(df.melted, 'value.y'))
 ```
 
 ```{r}
@@ -299,9 +306,11 @@ opti=calculpoids(df.melt, liste_value[1], pays)
 special=list()
 ###création d'une liste pour les prédicteurs spéciaux
 year=seq(1999,2012,2)
+a=0
 for(i in liste_value ){
   for (j in date){
-    if(i=='value.x'&j==1999){liste=list(list(i,j, "mean"))}
+    a=a+1
+    if(a==1){liste=list(list(i,j, "mean"))}
     else{liste=c(liste, list(list(i, j, "mean")))}
   }
 }

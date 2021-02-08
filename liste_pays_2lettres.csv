@@ -1,0 +1,253 @@
+,ISO 3166 ALPHA-2,Pays
+0,AF,Afghanistan
+1,AX,Îles Aland
+2,AL,Albanie
+3,DZ,Algérie
+4,AS,Samoa américaines
+5,AD,Andorre
+6,AO,Angola
+7,AI,Anguilla
+8,AQ,Antarctique
+9,AG,Antigua-et-Barbuda
+10,AR,Argentine
+11,AM,Arménie
+12,AW,Aruba
+13,AU,Australie
+14,AT,Autriche
+15,AZ,Azerbaïdjan
+16,BS,Bahamas
+17,BH,Bahreïn
+18,BD,Bangladesh
+19,BB,Barbades
+20,BY,Biélorussie
+21,BE,Belgique
+22,BZ,Belize
+23,BJ,Bénin
+24,BM,Bermudes
+25,BT,Bhoutan
+26,BO,Bolivie
+27,BQ,"Saba, Saint-Eustache et Bonaire"
+28,BA,Bosnie-Herzégovine
+29,BW,Botswana
+30,BV,Île Bouvet
+31,BR,Brésil
+32,IO,Territoire Britannique de l'Océan Indien
+33,VG,Îles Vierges britanniques
+34,BN,Brunei
+35,BG,Bulgarie
+36,BF,Burkina Faso
+37,BI,Burundi
+38,KH,Cambodge
+39,CM,Cameroun
+40,CA,Canada
+41,CV,Cap vert
+42,KY,Îles Caïmans
+43,CF,République centrafricaine
+44,TD,Tchad
+45,CL,Chili
+46,CN,Chine
+47,CX,Îles Christmas
+48,CC,Îles Cocos
+49,CO,Colombie
+50,KM,Comores
+51,CK,Îles Cook
+52,CR,Costa Rica
+53,HR,Croatie
+54,CU,Cuba
+55,CW,Curaçao
+56,CY,Chypre
+57,CZ,République Tchèque
+58,CD,République démocratique du Congo
+59,DK,Danemark
+60,DJ,Djibouti
+61,DM,Dominique
+62,DO,République Dominicaine
+63,TL,Timor oriental
+64,EC,Équateur
+65,EG,Égypte
+66,SV,Le Salvador
+67,GQ,Guinée équatoriale
+68,ER,Érythrée
+69,EE,Estonie
+70,ET,Éthiopie
+71,FK,Îles Falkland
+72,FO,Îles Féroé
+73,FJ,Fiji
+74,FI,Finlande
+75,FR,France
+76,GF,Guyane française
+77,PF,Polynésie française
+78,TF,Terres australes et antarctiques françaises
+79,GA,Gabon
+80,GM,Gambie
+81,GE,État de Géorgie
+82,DE,Allemagne
+83,GH,Ghana
+84,GI,Gribraltar
+85,GR,Grèce
+86,GL,Groenland
+87,GD,Grenade
+88,GP,Guadeloupe
+89,GU,Guam
+90,GT,Guatémala
+91,GG,Guernesey
+92,GN,Guinée
+93,GW,Guinée-Bissau
+94,GY,Guyane
+95,HT,Haïti
+96,HM,Îles Heard et îles MacDonald
+97,HN,Honduras
+98,HK,Hong Kong
+99,HU,Hongrie
+100,IS,Islande
+101,IN,Inde
+102,ID,Indonésie
+103,IR,Iran
+104,IQ,Irak
+105,IE,Irlande
+106,IM,Île de Man
+107,IL,Israël
+108,IT,Italie
+109,CI,Côte-d'Ivoire
+110,JM,Jamaïque
+111,JP,Japon
+112,JE,Jersey
+113,JO,Jordanie
+114,KZ,Kazakhstan
+115,KE,Kenya
+116,KI,Kiribati
+117,XK,Kosovo
+118,KW,Koweït
+119,KG,Kirghizistan
+120,LA,Laos
+121,LV,Lettonie
+122,LB,Liban
+123,LS,Lesotho
+124,LR,Libéria
+125,LY,Libye
+126,LI,Liechtenstein
+127,LT,Lituanie
+128,LU,Luxembourg
+129,MO,Macao
+130,MK,Macédoine
+131,MG,Madagascar
+132,MW,Malawi
+133,MY,Malaysie
+134,MV,Maldives
+135,ML,Mali
+136,MT,Malte
+137,MH,Îles Marshall
+138,MQ,Martinique
+139,MR,Mauritanie
+140,MU,Île Maurice
+141,YT,Mayotte
+142,MX,Mexique
+143,FM,Micronésie
+144,MD,Moldavie
+145,MC,Monaco
+146,MN,Mongolie
+147,ME,Monténégro
+148,MS,Montserrat
+149,MA,Maroc
+150,MZ,Mozambique
+151,MM,Myanmar
+152,,Namibie
+153,NR,Nauru
+154,NP,Népal
+155,NL,Pays-Bas
+156,AN,Antilles néerlandaises
+157,NC,Nouvelle-Calédonie
+158,NZ,Nouvelle Zélande
+159,NI,Nicaragua
+160,NE,Niger
+161,NG,Nigéria
+162,NU,Niue
+163,NF,Île Norfolk
+164,KP,Corée du Nord
+165,MP,Îles Mariannes du Nord
+166,NO,Norvège
+167,OM,Oman
+168,PK,Pakistan
+169,PW,Palaos
+170,PS,Territoire Palestinien
+171,PA,Panama
+172,PG,Papouasie-Nouvelle-Guinée
+173,PY,Paraguay
+174,PE,Pérou
+175,PH,Philippines
+176,PN,Îles Pitcairn
+177,PL,Pologne
+178,PT,Portugal
+179,PR,Puerto Rico
+180,QA,Qatar
+181,CG,République du Congo
+182,RE,La Réunion
+183,RO,Roumanie
+184,RU,Russie
+185,RW,Rwanda
+186,BL,Saint Barthélemy
+187,SH,Sainte-Hélène
+188,KN,Saint-Kitts-et-Nevis
+189,LC,Sainte-Lucie
+190,MF,Saint-Martin
+191,PM,Saint Pierre et Miquelon
+192,VC,Saint-Vincent-et-les-Grenadines
+193,WS,Samoa
+194,SM,San Marin
+195,ST,Sao Tomé-et-Principe
+196,SA,Arabie Saoudite
+197,SN,Sénégal
+198,RS,Serbie
+199,CS,Serbie et Montenegro
+200,SC,Seychelles
+201,SL,Sierra Leone
+202,SG,Singapour
+203,SX,Saint-Martin
+204,SK,Slovaquie
+205,SI,Slovénie
+206,SB,Îles Salomon
+207,SO,Somalie
+208,ZA,Afrique du Sud
+209,GS,Géorgie du Sud et les îles Sandwich
+210,KR,Corée du Sud
+211,SS,Soudan du Sud
+212,ES,Espagne
+213,LK,Sri Lanka
+214,SD,Soudan
+215,SR,Surinam
+216,SJ,Svalbard et Jan Mayen
+217,SZ,Swaziland
+218,SE,Suède
+219,CH,Suisse
+220,SY,Syrie
+221,TW,Taiwan
+222,TJ,Tajikistan
+223,TZ,Tanzanie
+224,TH,Thaïlande
+225,TG,Togo
+226,TK,Tokelau
+227,TO,Tonga
+228,TT,Trinité et Tobago
+229,TN,Tunisie
+230,TR,Turquie
+231,TM,Turkménistan
+232,TC,Îles Turques et Caïques
+233,TV,Tuvalu
+234,VI,Îles Vierges des États-Unis
+235,UG,Ouganda
+236,UA,Ukraine
+237,AE,Émirats Arabes Unis
+238,GB,Royaume-Uni
+239,US,États-Unis (USA)
+240,UM,Îles Mineures éloignées des États-Unis
+241,UY,Uruguay
+242,UZ,Ouzbékistan
+243,VU,Vanuatu
+244,VA,Vatican
+245,VE,Vénézuela
+246,VN,Vietnam
+247,WF,Wallis et Futuna
+248,EH,Sahara occidental
+249,YE,Yemen
+250,ZM,Zambie
+251,ZW,Zimbabwe
