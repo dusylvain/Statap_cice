@@ -28,9 +28,6 @@ date=seq(2000, 2017)
 
 
 ```{r}
-codepays
-```
-```{r}
 codepays=codepays %>% rename( country=ISO2.digit.Alpha)
 comptebis=left_join(compte,codepays,by="country")
 compte=comptebis%>% rename(country3L=ISO3.digit.Alpha)
@@ -53,7 +50,6 @@ df.melted$temps=as.numeric(str_sub(df.melted$variable, 2, 5))
 df.melted$country=as.character(df.melted$country3L)
 return (df.melted[-3]%>% select(-country3L))
 }
-melt_ada('EMP','TOT')
 ```
 
 
@@ -74,14 +70,12 @@ df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,L
 #le calcul du salaire réel horaire
 ```{r}
 df.W=inner_join(melt_ada('COMP','TOT'), melt_ada("VA_PI",'TOT'),by=c("country","temps"))
-df.W
 df.W=inner_join(df.W, melt_ada("H_EMPE",'TOT'),by=c("country","temps"))
 df.W$index=c(1:length((unique(df.W$country))))
 df.W$country=as.character(df.W$country)
 df.W$W=(df.W$value.x*100/df.W$value.y)*1000/df.W$value#le nombre d'heures travaillées est en milliers
 df.W$VA=as.numeric(df.W$W)
 df.W=df.W[,c('country','W', 'temps')]
-df.W
 ```
 
 
@@ -98,9 +92,6 @@ df.scale$VA<-scale(df.melted2$VA)
 df.scale$W<-scale(df.melted2$W)
 ```
 ```{r}
-lignedata[5:23]
-```
-```{r}
 tableau=subset(capital,(var=='Iq_GFCF')& code=='TOT')[c("country3L", lignedata[8:21],"var")]
 indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
 tableau=tableau[indligneNA,]
@@ -110,7 +101,7 @@ tableau
 
 #Intégration de la population
 ```{r}
-df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite')]
+df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite','LAB')]
 dfpop=subset(autre_pays,Simple.Indicator=="pop")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfpop)<-dfpop[,1]
 head(dfpop[-c(1,2)])
@@ -122,7 +113,7 @@ df <- data.frame(x=1995:2017, data.frame(df_pop))
 df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
 ```
 
-#Intégration du taux de chomage
+#Intégration du taux de chomage et exportations
 ```{r}
 dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfchom)<-dfchom[,1]
@@ -141,12 +132,12 @@ df.exp <- melt(df, id="x")%>%rename(country=variable, temps=x,export=value)
 ```{r}
 df.melted2=left_join(df.melted2,df.chom)
 df.melted2=left_join(df.melted2,df.pop)
-df.melted2=left_join(df.melted2,df.chom)
 df.melted2=left_join(df.melted2,df.exp)
 
 ```
 ```{r}
 df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
+df.melted2$Part_lab=df.melted2$LAB/df.melted2$VA
 df.melted2
 ```
 #Investissement
@@ -155,14 +146,13 @@ df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[5:22])
 df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
 df.melted_i$index=c(1:length((unique(df.melted_i$country))))
 df.melted_i
-#PROBLEME : les valeurs manquantes font perdre 10 pays
 ```
 
 
 ###La fonction de base
 ```{r}
  dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors = c("VA_pop","Emploi","W","Productivite","chomage"), #Les variables utilisées en contrôle
+                predictors = c("VA_pop","Emploi","W","Productivite","chomage","Part_lab"), #Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
                 dependent="Emploi", #variable d'intérêt
@@ -196,12 +186,6 @@ dataprep.out$X0
 synth.tables$tab.w
 ```
 
-
-#On enleve les colonne mnt innutile varx et vay
-```{r}
-df.melted2=df.melted2 %>% select(-c(var.x,var.y,var.x.x,var.y.y))
-df.melted2
-```
 
 ###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
 
@@ -446,18 +430,18 @@ df.melted_i
 ```
 
 ```{r}
-variable=c("Invest_pop","W","VA_pop","Productivite","chomage","export")
+variable=c("Invest_pop","W","VA_pop","Productivite","chomage","export","Part_lab")
 dataprep.out=Synth::dataprep(foo=df.melted_i,
-                predictors=variable,#Les variables utilisées en contrôle
+                special.predictors = gen_liste(variable),#Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent="Emploi", #variable d'intérêt
+                time.predictors.prior = 2013, #période pré-traitement
+                dependent="chomage", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 10, # n° de l'unité traitée
                 controls.identifier = c(1:9,11:21), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2012, #période de maximisation
+                time.optimize.ssr = 2000:2010, #période de maximisation
                 time.plot=1999:2016, ) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
