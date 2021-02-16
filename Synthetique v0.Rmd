@@ -34,13 +34,16 @@ codepays
 codepays=codepays %>% rename( country=ISO2.digit.Alpha)
 comptebis=left_join(compte,codepays,by="country")
 compte=comptebis%>% rename(country3L=ISO3.digit.Alpha)
-compte
+
+capitalbis=left_join(capital,codepays,by="country")
+capital=capitalbis%>% rename(country3L=ISO3.digit.Alpha)
+
 ```
 
 #fonction qui permet de récupérer des dataframes utilisables sur une donnée
 ```{r}
-melt_ada <- function(vari,codei,basei=compte){
-tableau=subset(basei,(var==vari)& code==codei)[c("country3L", lignedata,"var")]
+melt_ada <- function(vari,codei,basei=compte,tps=lignedata){
+tableau=subset(basei,(var==vari)& code==codei)[c("country3L", tps,"var")]
 indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
 tableau=tableau[-indligneNA,]
 df.melted <- melt(tableau,id=c('country3L','var'))
@@ -89,10 +92,19 @@ df.scale$Emploi<-scale(df.melted2$Emploi)
 df.scale$VA<-scale(df.melted2$VA)
 df.scale$W<-scale(df.melted2$W)
 ```
+```{r}
+lignedata[5:23]
+```
+```{r}
+tableau=subset(capital,(var=='Iq_GFCF')& code=='TOT')[c("country3L", lignedata[8:21],"var")]
+indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
+tableau=tableau[indligneNA,]
+tableau
+```
 
 #Investissement
 ```{r}
-df.invest=melt_ada('Iq_GFCF','TOT',capital)
+df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[5:22])
 df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
 df.melted_i$index=c(1:length((unique(df.melted_i$country))))
 df.melted_i
@@ -203,29 +215,34 @@ opti$par=matrix(opti$par, ncol=1)}
 ```{r}
 optix=quiet(calculpoids(df.melted, 'VA'))
 ```
+```{r}
+gen_liste=function(liste_value)
+{
+a=0
+year=seq(1999,2012,2)
+for(i in liste_value ){
+  for (j in year){
+    a=a+1
+    if(a==1){liste=list(list(i,j, "mean"))}
+    
+    else{liste=c(liste, list(list(i, j, "mean")))  }
+  }
+}
+liste=as.list(liste)
+
+return(liste)
+}
+```
 
 
 ```{r}
-
 special=list()
 #Version avec les différentes dates version Synth
-dataprep.out=Synth::dataprep(foo=df.melted,
+dataprep.out=Synth::dataprep(foo=df.melted2,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = list(list("VA",1999,"mean"),
-                                           list("VA",2001,"mean"),
-                                           list("VA",2003,"mean"),
-                                           list("VA",2005,"mean"),
-                                           list("VA",2007,"mean"),
-                                           list("VA",2009,"mean"),
-                                           list("Emploi",1999,"mean"),
-                                           list("Emploi",2001,"mean"),
-                                           list("Emploi",2003,"mean"),
-                                           list("Emploi",2005,"mean"),
-                                           list("Emploi",2007,"mean"),
-                                           list("Emploi",2009,"mean")
-                                           ),
-                dependent="VA", #variable d'intérêt
+                special.predictors = gen_liste(c("VA_pop","Emploi","W")),
+                dependent="Emploi", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 11, # n° de l'unité traitée
@@ -238,7 +255,10 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+```
 
+
+```{r}
 #Version sans les différentes dates
 dataprep.out=Synth::dataprep(foo=df.melted,
                 predictors = c("VA","Emploi"), #Les variables utilisées en contrôle
@@ -261,6 +281,10 @@ synth.out$solution.w=optix#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+```
+
+
+```{r}
 ```
 
 ```{r}
@@ -348,21 +372,14 @@ opti=calculpoids(df.melt, liste_value[1], pays)
 special=list()
 ###création d'une liste pour les prédicteurs spéciaux
 year=seq(1999,2012,2)
-a=0
-for(i in liste_value ){
-  for (j in date){
-    a=a+1
-    if(a==1){liste=list(list(i,j, "mean"))}
-    else{liste=c(liste, list(list(i, j, "mean")))}
-  }
-}
+
 liste=as.list(liste)
 ind_pays=which(df.melt$country==pays)[1]
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = liste,
+                special.predictors = gen_liste(liste_value),
                 dependent=liste_value[1], #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
@@ -409,40 +426,17 @@ df.melted_i
 
 ```{r}
 dataprep.out=Synth::dataprep(foo=df.melted_i,
-                special.predictors = list(list("VA",1999,"mean"),
-                                           list("VA",2001,"mean"),
-                                           list("VA",2003,"mean"),
-                                           list("VA",2005,"mean"),
-                                           list("VA",2007,"mean"),
-                                           list("VA",2009,"mean"),
-                                           list("Emploi",1999,"mean"),
-                                           list("Emploi",2001,"mean"),
-                                           list("Emploi",2003,"mean"),
-                                           list("Emploi",2005,"mean"),
-                                           list("Emploi",2007,"mean"),
-                                           list("Emploi",2009,"mean"),
-                                           list("value",1999,"mean"),
-                                           list("value",2001,"mean"),
-                                           list("value",2003,"mean"),
-                                           list("value",2005,"mean"),
-                                           list("value",2007,"mean"),
-                                           list("value",2009,"mean"),
-                                           list("value",1999,"mean"),
-                                           list("W",2001,"mean"),
-                                           list("W",2003,"mean"),
-                                           list("W",2005,"mean"),
-                                           list("W",2007,"mean"),
-                                           list("W",2009,"mean")),#Les variables utilisées en contrôle
+                special.predictors = gen_liste(c("VA","Emploi","W")),#Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
                 dependent="value", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
-                treatment.identifier = 9, # n° de l'unité traitée
-                controls.identifier = c(1:8,10:14), #n° des unités de contrôles
+                treatment.identifier = 11, # n° de l'unité traitée
+                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
-                time.plot=1995:2017, ) #période tracée sur le graphique
+                time.plot=1999:2016, ) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
