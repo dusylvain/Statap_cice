@@ -60,11 +60,12 @@ df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","
 df.melted$index=c(1:length((unique(df.melted$country))))
 df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
 df.melted$country=as.character(df.melted$country)
-
+df.melted=inner_join(df.melted, melt_ada("LP_QI","TOT"), by=c("country","temps"))
+df.melted
 ```
 
 ```{r}
-df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y)
+df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value)
 ```
 
 #le calcul du salaire réel horaire
@@ -80,7 +81,8 @@ df.W=df.W[,c('country','W', 'temps')]
 df.W
 ```
 
-#La fusion des bases : PIB, emploi, salaire réel horaire
+
+#La fusion des bases : PIB, emploi, salaire réel horaire, productivité
 ```{r}
 df.melted2=inner_join(df.melted, df.W, by=c("country","temps"))
 df.melted2$index=c(1:length((unique(df.melted2$country))))
@@ -114,12 +116,12 @@ df.melted_i
 
 #On enleve les colonne mnt innutile varx et vay
 ```{r}
-df.melted2=df.melted2 %>% select(-c(var.x,var.y))
+df.melted2=df.melted2 %>% select(-c(var.x,var.y,var))
 ```
 
 #Intégration de la population
 ```{r}
-df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W')]
+df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite')]
 dfpop=subset(autre_pays,Simple.Indicator=="pop")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfpop)<-dfpop[,1]
 head(dfpop[-c(1,2)])
@@ -131,9 +133,24 @@ df <- data.frame(x=1995:2017, data.frame(df_pop))
 df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
 ```
 
+#Intégration du taux de chomage
+```{r}
+autre_pays
+dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfchom)<-dfchom[,1]
+```
 
 ```{r}
+df_chom<-t(dfchom[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_chom))
+df.chom <- melt(df, id="x")%>%rename(country=variable, temps=x,chomage=value)
+df.chom
+```
+
+```{r}
+df.melted2=left_join(df.melted2,df.chom)
 df.melted2=left_join(df.melted2,df.pop)
+
 ```
 ```{r}
 df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
@@ -145,14 +162,14 @@ df.melted2
 ###La fonction de base
 ```{r}
  dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors = c("VA_pop","Emploi","W"), #Les variables utilisées en contrôle
+                predictors = c("VA_pop","Emploi","W","Productivite","chomage"), #Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                dependent="VA", #variable d'intérêt
+                dependent="Emploi", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
+                treatment.identifier = 10, # n° de l'unité traitée
+                controls.identifier = c(1:9,11:21), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
                 time.plot=1995:2017, ) #période tracée sur le graphique
@@ -241,12 +258,12 @@ special=list()
 dataprep.out=Synth::dataprep(foo=df.melted2,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = gen_liste(c("VA_pop","Emploi","W")),
-                dependent="Emploi", #variable d'intérêt
+                special.predictors = gen_liste(c("VA_pop","Emploi","W","Productivite")),
+                dependent="VA_pop", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
+                treatment.identifier = 10, # n° de l'unité traitée
+                controls.identifier = c(1:9,11:21), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 1999:2012, #période de maximisation
                 time.plot=1995:2017) #période tracée sur le graphique
@@ -285,11 +302,7 @@ Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.po
 
 
 ```{r}
-```
-
-```{r}
- synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
- synth.res = synth.out)
+ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
 
 synth.tables$tab.w
 ```
@@ -421,19 +434,21 @@ tripleSynth(liste_value=c("VA", "Emploi", "W"), df.melted2, pays='FR')
 ```
 
 ```{r}
+df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
 df.melted_i
 ```
 
 ```{r}
+variable=c("Invest_pop","W","VA_pop","Productivite","chomage")
 dataprep.out=Synth::dataprep(foo=df.melted_i,
-                special.predictors = gen_liste(c("VA","Emploi","W")),#Les variables utilisées en contrôle
+                special.predictors = gen_liste(variable),#Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                dependent="value", #variable d'intérêt
+                dependent="Emploi", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
+                treatment.identifier = 10, # n° de l'unité traitée
+                controls.identifier = c(1:9,11:21), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
                 time.plot=1999:2016, ) #période tracée sur le graphique
@@ -442,8 +457,11 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-synth.out$solution.v
-synth.out$solution.w
+ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
+ synth.res = synth.out)
+
+synth.tables$tab.w
+synth.tables$tab.v
 ```
 
 
