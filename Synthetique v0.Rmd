@@ -38,6 +38,8 @@ compte=comptebis%>% rename(country3L=ISO3.digit.Alpha)
 capitalbis=left_join(capital,codepays,by="country")
 capital=capitalbis%>% rename(country3L=ISO3.digit.Alpha)
 
+croissbis=left_join(croiss,codepays,by="country")
+croiss=croissbis%>% rename(country3L=ISO3.digit.Alpha)
 ```
 
 #fonction qui permet de récupérer des dataframes utilisables sur une donnée
@@ -61,11 +63,12 @@ df.melted$index=c(1:length((unique(df.melted$country))))
 df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
 df.melted$country=as.character(df.melted$country)
 df.melted=inner_join(df.melted, melt_ada("LP_QI","TOT"), by=c("country","temps"))
+df.melted=inner_join(df.melted, melt_ada("LAB","TOT",croiss), by=c("country","temps"))
 df.melted
 ```
 
 ```{r}
-df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value)
+df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,LAB=value.y.y)
 ```
 
 #le calcul du salaire réel horaire
@@ -104,20 +107,6 @@ tableau=tableau[indligneNA,]
 tableau
 ```
 
-#Investissement
-```{r}
-df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[5:22])
-df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
-df.melted_i$index=c(1:length((unique(df.melted_i$country))))
-df.melted_i
-#PROBLEME : les valeurs manquantes font perdre 10 pays
-```
-
-
-#On enleve les colonne mnt innutile varx et vay
-```{r}
-df.melted2=df.melted2 %>% select(-c(var.x,var.y,var))
-```
 
 #Intégration de la population
 ```{r}
@@ -135,28 +124,39 @@ df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
 
 #Intégration du taux de chomage
 ```{r}
-autre_pays
 dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfchom)<-dfchom[,1]
+dfexports=subset(autre_pays,Simple.Indicator=="exports_hab")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfexports)<-dfexports[,1]
 ```
-
 ```{r}
 df_chom<-t(dfchom[-c(1,2)])
 df <- data.frame(x=1995:2017, data.frame(df_chom))
 df.chom <- melt(df, id="x")%>%rename(country=variable, temps=x,chomage=value)
-df.chom
+df_exp<-t(dfexports[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_exp))
+df.exp <- melt(df, id="x")%>%rename(country=variable, temps=x,export=value)
 ```
 
 ```{r}
 df.melted2=left_join(df.melted2,df.chom)
 df.melted2=left_join(df.melted2,df.pop)
+df.melted2=left_join(df.melted2,df.chom)
+df.melted2=left_join(df.melted2,df.exp)
 
 ```
 ```{r}
 df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
 df.melted2
 ```
-
+#Investissement
+```{r}
+df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[5:22])
+df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
+df.melted_i$index=c(1:length((unique(df.melted_i$country))))
+df.melted_i
+#PROBLEME : les valeurs manquantes font perdre 10 pays
+```
 
 
 ###La fonction de base
@@ -194,6 +194,13 @@ dataprep.out$X0
  synth.res = synth.out)
 
 synth.tables$tab.w
+```
+
+
+#On enleve les colonne mnt innutile varx et vay
+```{r}
+df.melted2=df.melted2 %>% select(-c(var.x,var.y,var.x.x,var.y.y))
+df.melted2
 ```
 
 ###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
@@ -439,9 +446,9 @@ df.melted_i
 ```
 
 ```{r}
-variable=c("Invest_pop","W","VA_pop","Productivite","chomage")
+variable=c("Invest_pop","W","VA_pop","Productivite","chomage","export")
 dataprep.out=Synth::dataprep(foo=df.melted_i,
-                special.predictors = gen_liste(variable),#Les variables utilisées en contrôle
+                predictors=variable,#Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
                 dependent="Emploi", #variable d'intérêt
