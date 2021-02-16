@@ -434,14 +434,14 @@ variable=c("Invest_pop","W","VA_pop","Productivite","chomage","export","Part_lab
 dataprep.out=Synth::dataprep(foo=df.melted_i,
                 special.predictors = gen_liste(variable),#Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2013, #période pré-traitement
+                time.predictors.prior = 2012, #période pré-traitement
                 dependent="chomage", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 10, # n° de l'unité traitée
                 controls.identifier = c(1:9,11:21), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2010, #période de maximisation
+                time.optimize.ssr = 2000:2012, #période de maximisation
                 time.plot=1999:2016, ) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
