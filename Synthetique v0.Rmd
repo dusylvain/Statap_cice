@@ -1,3 +1,5 @@
+
+
 ```{r}
 library(ggplot2)
 library(reshape2)
@@ -7,6 +9,7 @@ library(tidyverse)
 library(numDeriv)
 library('alabama')
 ```
+
 ```{r}
 capital=read.csv("Statistical_Capital.csv")
 croiss=read.csv("Statistical_Growth-Accounts.csv")
@@ -201,9 +204,9 @@ quiet <- function(x) {
 ```
 
 ```{r}
-calculpoids=function(df.melted, value, pays='FR'){
+calculpoids=function(df.melted, value, pays='FRA'){
   #préparation des données
-pays_autres=max(df.melted$index)
+pays_autres=length(c(table(df.melted$country)))-1
 Xt=subset(df.melted, country==pays& temps<2013 &temps>1999)
 Xt=Xt[,value]#on récupère les données pour la France
 
@@ -217,12 +220,14 @@ x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
 f=function(x){norm(Xt-x%*%Xn, type="2")}
 n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
 q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
-opti=auglag(x0, f, hin=n, heq=q)#fonction d'optimisation sur toute la période
+opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
 opti$par=matrix(opti$par, ncol=1)}
 ```
 ```{r}
-optix=quiet(calculpoids(df.melted, 'VA'))
+optix=calculpoids(df.melted, 'VA')
 ```
+
+
 ```{r}
 gen_liste=function(liste_value)
 {
@@ -370,14 +375,14 @@ synth.tables$tab.v
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
 ```{r}
-tripleSynth=function(liste_value, df.melt, pays='FR'){
+tripleSynth=function(liste_value, df.melt, pays='FRA'){
 #calcul des poids :
 opti=calculpoids(df.melt, liste_value[1], pays)
 special=list()
 ###création d'une liste pour les prédicteurs spéciaux
 year=seq(1999,2012,2)
 
-liste=as.list(liste)
+gen_liste(liste_value)
 ind_pays=which(df.melt$country==pays)[1]
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
@@ -421,7 +426,7 @@ synth.out$solution.w=opti#on remplace les poids par ceux calculés
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 }
-tripleSynth(liste_value=c("VA", "Emploi", "W"), df.melted2, pays='FR')
+tripleSynth(liste_value=c("VA", "Emploi", "W"), df.melted2, pays='FRA')
 ```
 
 ```{r}
@@ -454,6 +459,57 @@ Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.po
 synth.tables$tab.w
 synth.tables$tab.v
 ```
+
+###Tentative en normalisant###
+
+
+```{r}
+value='VA'
+pays='FRA'
+Xt=subset(df.melted, country==pays& temps<2013 &temps>1999)
+Xt=Xt[,value]
+Xt=scale(Xt)#on récupère les données pour la France
+
+Xn=subset(df.melted, temps<2013 &temps>1999)
+Xn=Xn[Xn$country!=pays,]#on récupère les autres
+Xn=matrix(Xn[,value], nrow=pays_autres)
+Xn=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
+Xt=Xt[1:13]
+```
+
+
+
+```{r}
+pays_autres=nrow(Xn)
+x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
+f=function(x){norm(Xt-x%*%Xn, type="2")}
+n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
+q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
+opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
+opti$par=matrix(opti$par, ncol=1)
+```
+```{r}
+opti$par
+```
+
+```{r}
+frsynth=t(opti$par)%*%Xn*sd(c(Xt))+mean(c(Xt))
+```
+
+```{r}
+Xt=subset(df.melted, country==pays)
+Xt=Xt[,value]
+Xn=subset(df.melted, country!=pays)
+Xn=matrix(Xn[,value], nrow=pays_autres)
+plot(c(t(opti$par)%*%Xn*sd(c(Xt))+mean(c(Xt))))
+plot(Xt)
+
+```
+
+
+
+
+
 
 
 
