@@ -439,7 +439,7 @@ df.melted_i
 ```{r}
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
 
-variable=c("Invest_pop","W","VA_pop","Productivite","export","Part_lab","Emploi_scale")
+variable=c("Invest_pop","W","VA_pop","Productivite","export","Part_lab")
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
 
 indice_sans=function(base)
@@ -476,6 +476,41 @@ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
 
 synth.tables$tab.w
 synth.tables$tab.v
+```
+
+```{r}
+variable=c("Invest_pop","chomage","VA_pop","Productivite","export","Part_lab","Emploi")
+df.melted_i$logemploi=log(df.melted_i$Emploi)
+
+dataprep.out=Synth::dataprep(foo=df.melted_i,
+                predictors = variable,
+                time.predictors.prior = 2000:2011, #période pré-traitement
+                special.predictors = gen_liste(variable),
+                dependent="Emploi", #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 10, # n° de l'unité traitée
+                controls.identifier = b, #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 2000:2010, #période de maximisation
+                time.plot=2000:2016, ) #période tracée sur le graphique
+
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright",Ylim=c(25000,28000),)
+
+Synth::gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out,Ylab = "PIB", Xlab = "year")
+
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
+ synth.res = synth.out)
+
+synth.tables$tab.w
+synth.tables$tab.v
+
+valeur=dataprep.out$Y1-dataprep.out$Y0%*%synth.out$solution.w
+valeur
 ```
 
 ###Tentative en normalisant###
