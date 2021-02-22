@@ -25,6 +25,11 @@ pays3lettres=read.csv('liste_pays_3lettres.csv')
 codepays=read.csv("codes_pays.csv")
 taux_change <- read_csv("taux_change.csv")
 ```
+
+```{r}
+donnee=read_csv('donnee.csv')
+```
+
 #les lignes avec des données
 ```{r}
 lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
@@ -175,12 +180,12 @@ df.melted_i<-df.melted_i %>% mutate(VA_pop = VA_pop/(pop*`rate2010 in NAT/US$`))
                 controls.identifier = c(1:10,12:23), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
-                time.plot=1995:2016, ) #période tracée sur le graphique
+                time.plot=1997:2016, ) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 synth.out$solution.v
 synth.out$solution.w
 ```
@@ -395,12 +400,12 @@ dataprep.out=Synth::dataprep(foo=df.melt,
                 controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 1999:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
+                time.plot=1997:2016) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 
 #Version sans les différentes dates
 dataprep.out=Synth::dataprep(foo=df.melt,
@@ -414,18 +419,31 @@ dataprep.out=Synth::dataprep(foo=df.melt,
                 controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2005:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
+                time.plot=1997:2016) #période tracée sur le graphique
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 #version a la mano
 synth.out$solution.w=opti#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 }
 tripleSynth(liste_value=c("VA", "Emploi", "W"), df.melted2, pays='FRA')
+```
+
+```{r}
+tripleSynth(liste_value=c("chomage"), df.melted2, pays='FRA')
+```
+```{r}
+tripleSynth(liste_value=c("VA_pop"), df.melted2, pays='FRA')
+```
+```{r}
+tripleSynth(liste_value=c("chomage","VA_pop", "W", "Productivite", "export"), df.melted2, pays='FRA')
+```
+```{r}
+tripleSynth(liste_value=c("VA_pop", "Emploi", "W", "Productivite", "export"), df.melted2, pays='FRA')
 ```
 
 ```{r}
