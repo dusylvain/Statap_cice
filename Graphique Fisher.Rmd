@@ -135,7 +135,7 @@ if (i>2)
 {
   #On complète la base
 noms=c(noms,rep(as.character(i),nrow(x)))
-valeur=c(valeur,dataprep_i.out$Y0%*%synth.out_i$solution.w-dataprep_i.out$Y1)
+valeur=c(valeur,dataprep_i.out$Y1-dataprep_i.out$Y0%*%synth.out_i$solution.w)
 df=data.frame(noms,valeur)
 if (i==17){couleur=c(couleur,"blue")}
 else{couleur=c(couleur,"red")}

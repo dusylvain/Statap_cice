@@ -326,23 +326,11 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-
+df.melted2
 dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors.op = "mean", #La manière dont on les prend en compte
+                predictors.op = "mean", #La manière dont on les prend en comptz
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = list(list("VA",1999,"mean"),
-                                           list("VA",2001,"mean"),
-                                           list("VA",2003,"mean"),
-                                           list("VA",2005,"mean"),
-                                           list("VA",2007,"mean"),
-                                           list("VA",2009,"mean"),
-                                           list("Emploi",1999,"mean"),
-                                           list("Emploi",2001,"mean"),
-                                           list("Emploi",2003,"mean"),
-                                           list("Emploi",2005,"mean"),
-                                           list("Emploi",2007,"mean"),
-                                           list("Emploi",2009,"mean")
-                                           ),
+                special.predictors=list(list("VA",1999,"mean")),
                 dependent="Emploi", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
@@ -449,24 +437,23 @@ indice_sans=function(base)
  a=a[a!=10]
  return(a)  
 }
-
 a=indice_sans(df.melted_i)
-b=c(1:9,11:21)
+b=c(1:17,19:21)
 
 dataprep.out=Synth::dataprep(foo=df.melted_i,
                 predictors = (variable),#Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = c(2000:2011), #période pré-traitement
-                dependent="Emploi", #variable d'intérêt
+                special.predictors = list(list("VA_pop",2000:2005,"mean"),list("VA_pop",2010:2011,"mean")),
+                dependent="VA_pop", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
-                treatment.identifier = 10, # n° de l'unité traitée
-                controls.identifier = a, #n° des unités de contrôles
+                treatment.identifier = 18, # n° de l'unité traitée
+                controls.identifier = b, #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2005, #période de maximisation
-                time.plot=1999:2016, ) #période tracée sur le graphique
+                time.optimize.ssr = 2000:2010, #période de maximisation
+                time.plot=1999:2016 ) #période tracée sur le graphique
 
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"),custom.v=c(1/12,1/12,1/12,1/12,5/12,1/12,1/12))
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
@@ -476,42 +463,75 @@ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
 
 synth.tables$tab.w
 synth.tables$tab.v
+df.melted_i
 ```
 
 ```{r}
-variable=c("Invest_pop","chomage","VA_pop","Productivite","export","Part_lab","Emploi")
-df.melted_i$logemploi=log(df.melted_i$Emploi)
-
-dataprep.out=Synth::dataprep(foo=df.melted_i,
-                predictors = variable,
-                time.predictors.prior = 2000:2011, #période pré-traitement
-                special.predictors = gen_liste(variable),
-                dependent="Emploi", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 10, # n° de l'unité traitée
-                controls.identifier = b, #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2010, #période de maximisation
-                time.plot=2000:2016, ) #période tracée sur le graphique
-
-
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright",Ylim=c(25000,28000),)
-
 Synth::gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out,Ylab = "PIB", Xlab = "year")
 
-synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
- synth.res = synth.out)
-
-synth.tables$tab.w
-synth.tables$tab.v
-
 valeur=dataprep.out$Y1-dataprep.out$Y0%*%synth.out$solution.w
-valeur
+plot(-valeur)
 ```
+
+
+```{r}
+for (i in c(2:20))
+{
+  #On calcul le contrôle synthétique avec l'unité i traitée
+  print(i)
+  a=c(1:(i-1),(i+1):21)
+  dataprep_i.out=Synth::dataprep(foo=df.melted_i,
+                predictors = (variable),
+                special.predictors = list(list("Emploi",2000:2005,"mean"),list("Emploi",2010:2011,"mean")),
+                time.predictors.prior = 2000:2011, 
+                dependent="Emploi", 
+                unit.variable = "index", 
+                unit.names.variable="country", 
+                treatment.identifier = i, 
+                controls.identifier =   a, 
+                time.variable = 'temps', 
+                time.optimize.ssr = 2000:2010, #
+                time.plot=1999:2016) 
+
+quiet(synth.out_i <- Synth::synth(data.prep.obj = dataprep_i.out, method = "BFGS")) #On calcul les résultats sans les afficher
+
+#Synth::gaps.plot(synth.res = synth.out_i, dataprep.res = dataprep_i.out,Ylab = "PIB", Xlab = "year")
+
+  if (i==2) { #On initialise une base avec en ligne le noms de l'unité puis l'effet du traitement pour chaque année (le numéro de l'année n'est pas dans la base)
+    noms=c(rep(as.character(i),nrow(dataprep_i.out$Y0)))
+    valeur=dataprep_i.out$Y1-dataprep_i.out$Y0%*%synth.out_i$solution.w 
+    df=data.frame(noms,valeur)
+    couleur=c("red") #ca c'est pour gérer les couleurs 
+  }
+    
+  if (i>2) {  #On complète la base
+    noms=c(noms,rep(as.character(i),nrow(dataprep_i.out$Y0)))
+    valeur=c(valeur,dataprep_i.out$Y1-dataprep_i.out$Y0%*%synth.out_i$solution.w)
+    df=data.frame(noms,valeur)
+    if (i==10){couleur=c(couleur,"blue")}
+    else{couleur=c(couleur,"red")}}
+
+}
+    
+df
+df2=data.frame(x=(rep((1999:2016),length(unique(noms)))),df)
+df_effe=filter(df2,x>2008)
+```
+
+
+```{r}
+qplot(x=x, y=valeur,color=noms, data=df_effe, geom="line",ylim=c(-2000,2000))+ xlab("Date")+scale_color_manual(breaks = unique(df2$noms),                        values=couleur)
+
+qplot(x=x, y=valeur,color=noms, data=df_effe, geom="line",ylim=c(-2000,2000))+ xlab("Date")
+
+df.melted_i
+```
+
+
+
+
+
+
 
 ###Tentative en normalisant###
 
