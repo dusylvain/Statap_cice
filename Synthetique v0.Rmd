@@ -153,7 +153,7 @@ df.melted_i
 ```
 
 
-
+#Donnée réelle
 ```{r}
 taux_change2010 <- taux_change %>% filter(year == 2010) %>%
   rename(`rate2010 in NAT/US$` = `rate in NAT/US$`, country=country3) %>% select(-year)
@@ -164,8 +164,36 @@ df.melted_i<-df.melted_i %>% mutate(VA_pop = VA_pop/(pop*`rate2010 in NAT/US$`))
 ```
 
 
+#Indice 100 en 2010
+```{r}
+donn2010=df.melted_i%>%filter(temps==2010)%>%select('country','VA','Emploi')%>%rename(VA2010=VA, Emp2010=Emploi)
+donn2010
+df.melted_i=df.melted_i%>%left_join(donn2010,on="country")
+```
 
+```{r}
+df.melted_i$VA_ind=(df.melted_i$VA/df.melted_i$VA2010)*100
+df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2010)*100
+```
 
+```{r}
+df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
+df.melted_i
+```
+
+#Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
+```{r}
+base=NULL
+#On peut facilement rajouter les évolutions des autres var en changeant un tt petit peu le code
+for (pays in unique(df.melted_i$country)){
+a=df.melted_i%>%filter(country==pays)%>%select(temps,country,VA)
+a$VA[2:nrow(a)]=diff(a$VA)/a$VA*100
+a=a%>%rename(evol_VA=VA)
+base=rbind(base,a)
+}
+df.evol=df.melted_i%>%full_join(base,on=c('country','temps'))
+df.evol=df.evol%>%filter(temps>1997)
+```
 
 ###La fonction de base
 ```{r}
@@ -323,7 +351,7 @@ optiy=quiet(calculpoids(df.melted, 'Emploi'))
 ```
 
 ```{r}
-dataprep.out=Synth::dataprep(foo=df.melted,
+dataprep.out=Synth::dataprep(foo=df.melted2,
                 predictors = c("VA","Emploi"), #Les variables utilisées en contrôle
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
@@ -334,7 +362,7 @@ dataprep.out=Synth::dataprep(foo=df.melted,
                 controls.identifier = c(1:10,12:22), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
+                time.plot=1997:2016) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
@@ -446,20 +474,17 @@ tripleSynth(liste_value=c("chomage","VA_pop", "W", "Productivite", "export"), df
 tripleSynth(liste_value=c("VA_pop", "Emploi", "W", "Productivite", "export"), df.melted2, pays='FRA')
 ```
 
-```{r}
-df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
-df.melted_i
-```
+
 
 ```{r}
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
 df.melted_i
-variable=c("Invest_pop","W","VA_pop","Productivite","export","Part_lab","chomage")
+variable=c("Invest_pop","W","VA_ind","Productivite","export","Part_lab","chomage")
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
 
 indice_sans=function(base)
 {
- df_exo=filter(df.melted_i, country !='ITA')
+ df_exo=filter(df.melted_i, country !='ITA', country!='DEU')
  a=unique(df_exo$index) 
  a=a[a!=11]
  return(a)  
@@ -467,11 +492,13 @@ indice_sans=function(base)
 a=indice_sans(df.melted_i)
 b=c(1:10,12:24)
 
-dataprep.out=Synth::dataprep(foo=df.melted_i,
+
+
+dataprep.out=Synth::dataprep(foo=df.evol,
                 predictors = (variable),#Les variables utilisées en contrôle
                 time.predictors.prior = c(2000:2011), #période pré-traitement
-                special.predictors = gen_liste("Emploi"),
-                dependent="Emploi", #variable d'intérêt
+                special.predictors = gen_liste("evol_VA"),
+                dependent="evol_VA", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 11, # n° de l'unité traitée
@@ -484,20 +511,22 @@ dataprep.out=Synth::dataprep(foo=df.melted_i,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright",Ylim = c(24000,30000))
+Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft")
 
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
  synth.res = synth.out)
 
 synth.tables$tab.w
 synth.tables$tab.v
-df.melted_i
+```
 
 
+
+```{r}
 write.table(df.melted_i, "donnee.csv",sep=",")
 read.csv("donnee.csv")
-
 ```
+
 
 ```{r}
 Synth::gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out,Ylab = "PIB", Xlab = "year")
@@ -691,11 +720,6 @@ mean(c(Xt))
 sd(c(Xt))
 ```
 
-```{r}
-donn2010=df.melted_i%>%filter(temps==2010)%>%select('country','VA')%>%rename(VA2010=VA)
-donn2010
-df.melted_i%>%left_join(donn2010,on="country")
-```
 
 
 
