@@ -568,26 +568,96 @@ df.melted_i
 ###Tentative en normalisant###
 
 
-```{r}
-value='VA'
-pays='FRA'
-pays_autres=length(c(table(df.melted$country)))-1
-Xt=subset(df.melted, country==pays& temps<2013 &temps>1999)
-Xt=Xt[,value]
-Xt=scale(Xt)#on récupère les données pour la France
 
-Xn=subset(df.melted, temps<2013 &temps>1999)
+```{r}
+SynthNorm=function(value, df.melt=df.melted,pays='FRA', date1=1999, date2=2013, date0=1997, date3=2016){
+pays_autres=length(c(table(df.melt$country)))-1
+Xt=subset(df.melt, country==pays& temps<date2 &temps>date1)
+Xt=Xt[,value]
+Xtnorm=scale(Xt)[1:(date2-date1-1)]#on récupère les données pour la France
+
+Xn=subset(df.melt, temps<date2 &temps>date1)
 Xn=Xn[Xn$country!=pays,]#on récupère les autres
 Xn=matrix(Xn[,value], nrow=pays_autres)
 Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
-Xt=Xt[1:13]
+
+#calcul des poids
+x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
+f=function(x){norm(Xtnorm-x%*%Xnorm, type="2")}
+n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
+q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
+opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
+opti$par=matrix(opti$par, ncol=1)
+#plot
+Xt=subset(df.melt, country==pays)
+Xt=Xt[,value]
+Xn=subset(df.melt)
+Xn=Xn[Xn$country!=pays,]#on récupère les autres
+Xn=matrix(Xn[,value], nrow=pays_autres)
+Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
+FrSynth=t(opti$par)%*%Xnorm*sd(c(Xt))+mean(c(Xt))
+df=data.frame(c(FrSynth, Xt))
+df$X=c(rep(2,nrow(df)/2),rep(3,nrow(df)/2))
+df$dat=c(date0:date3, date0:date3)
+ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
+  geom_line(aes(group=X))
+}
+SynthNorm('VA')
+```
+#fonction essai pour raccourcir la précédante
+```{r}
+#SynthNorm=function(value, df.melt=df.melted,pays='FRA', date1=1999, date2=2013, date0=1997, date3=2016){
+pays_autres=length(c(table(df.melt$country)))-1
+Xtout=subset(df.melt)[,c(value, 'country', 'temps')]
+Xautres=Xtout[Xtout$country!=pays,][,c(value, 'temps')]
+Xpays=Xtout[Xtout$country==pays,][,c(value, 'temps')]
+Xn=matrix(Xautres[Xautres$temps<date2,][Xautres$temps>date1,][,value], nrow=pays_autres)
+Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
+Xnorm2=t(scale(t(Xautres[,value])))
+
+Xtnorm=scale(Xpays[Xpays$temps<date2 &Xpays$temps>date1,])[1:(date2-date1+1)]#on récupère les données pour la France
+
+
+#calcul des poids
+x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
+f=function(x){norm(Xtnorm-x%*%Xnorm, type="2")}
+n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
+q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
+opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
+opti$par=matrix(opti$par, ncol=1)
+#plot
+FrSynth=t(opti$par)%*%Xnorm*sd(c(Xpays))+mean(c(Xpays))
+df=data.frame(c(FrSynth, Xt))
+df$X=c(rep(2,nrow(df)/2),rep(3,nrow(df)/2))
+df$dat=c(date0:date3, date0:date3)
+ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
+  geom_line(aes(group=X))
+
+#}
+#SynthNorm('VA')
+```
+```{r}
+SynthNorm('chomage',df.melt=df.melted_i)
 ```
 
+```{r}
+value='VA'
+df.melt=df.melted
+pays_autres=length(c(table(df.melt$country)))-1
+Xt=subset(df.melt, country==pays& temps<date2 &temps>date1)
+Xt=Xt[,value]
+Xtnorm=scale(Xt)[1:(date2-date1-1)]#on récupère les données pour la France
+
+Xn=subset(df.melt, temps<date2 &temps>date1)
+Xn=Xn[Xn$country!=pays,]#on récupère les autres
+Xn=matrix(Xn[,value], nrow=pays_autres)
+Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
+```
 
 #calcul des poids
 ```{r}
 x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
-f=function(x){norm(Xt-x%*%Xnorm, type="2")}
+f=function(x){norm(Xtnorm-x%*%Xnorm, type="2")}
 n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
 q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
 opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
@@ -602,13 +672,18 @@ Xn=subset(df.melted)
 Xn=Xn[Xn$country!=pays,]#on récupère les autres
 Xn=matrix(Xn[,value], nrow=pays_autres)
 Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
-
-plot(c(t(opti$par)%*%Xnorm*sd(c(Xt))+mean(c(Xt))))
+FrSynth=t(opti$par)%*%Xnorm*sd(c(Xt))+mean(c(Xt))
+plot(c(FrSynth))
 plot(Xt)
+df=data.frame(c(FrSynth, Xt))
+df$X=c(rep(2,nrow(df)/2),rep(3,nrow(df)/2))
+df$dat=c(1997:2016, 1997:2016)
+ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
+  geom_line(aes(group=X))
 
 ```
 ```{r}
-opti$par
+colnames(df)
 ```
 
 ```{r}
