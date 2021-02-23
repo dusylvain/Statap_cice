@@ -691,6 +691,11 @@ mean(c(Xt))
 sd(c(Xt))
 ```
 
+```{r}
+donn2010=df.melted_i%>%filter(temps==2010)%>%select('country','VA')%>%rename(VA2010=VA)
+donn2010
+df.melted_i%>%left_join(donn2010,on="country")
+```
 
 
 
