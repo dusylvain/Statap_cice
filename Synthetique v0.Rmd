@@ -27,7 +27,7 @@ taux_change <- read_csv("taux_change.csv")
 ```
 
 ```{r}
-donnee=read_csv('donnee.csv')
+donnee=read.csv('donnee.csv')
 ```
 
 #les lignes avec des données
@@ -82,7 +82,6 @@ df.melted=inner_join(df.melted, melt_ada("LAB","TOT",croiss), by=c("country","te
 
 ```{r}
 df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,LAB=value.y.y)
-df.melted
 ```
 
 #le calcul du salaire réel horaire
@@ -141,7 +140,6 @@ df.melted2=left_join(df.melted2,df.exp)
 ```{r}
 df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
 df.melted2$Part_lab=df.melted2$LAB/df.melted2$VA
-df.melted2
 ```
 
 #Investissement
@@ -149,9 +147,7 @@ df.melted2
 df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[1:22])
 df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
 df.melted_i$index=c(1:length((unique(df.melted_i$country))))
-df.melted_i
 ```
-
 
 #Donnée réelle
 ```{r}
@@ -178,60 +174,24 @@ df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2010)*100
 
 ```{r}
 df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
-df.melted_i
 ```
 
 #Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
+
 ```{r}
+f=function(varb='VA', df.melt=df.melted_i, df.evol=df.evol){
 base=NULL
 #On peut facilement rajouter les évolutions des autres var en changeant un tt petit peu le code
-for (pays in unique(df.melted_i$country)){
-a=df.melted_i%>%filter(country==pays)%>%select(temps,country,VA)
-a$VA[2:nrow(a)]=diff(a$VA)/a$VA*100
-a=a%>%rename(evol_VA=VA)
+for (pays in unique(df.melt$country)){
+a=df.melt%>%filter(country==pays)%>%select(temps,country, varb)
+a[,varb][2:nrow(a)]=diff(a[,varb])/a[,varb][2:nrow(a)]*100
+a=a%>%rename(evol_VA=varb)
 base=rbind(base,a)
 }
-df.evol=df.melted_i%>%full_join(base,on=c('country','temps'))
-df.evol=df.evol%>%filter(temps>1997)
+df.evol=df.melt%>%full_join(base,on=c('country','temps'))
+df.evol=df.evol%>%filter(temps>1997)}
+f()
 ```
-
-###La fonction de base
-```{r}
- dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors = c("VA_pop","Emploi","W","Productivite","chomage","Part_lab"), #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent="Emploi", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:23), #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2012, #période de maximisation
-                time.plot=1997:2016, ) #période tracée sur le graphique
-
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-synth.out$solution.v
-synth.out$solution.w
-```
-
-
-
-```{r}
-#dataprep.out$X1
-dataprep.out$X0
-```
-###Les poids utilisés
-```{r}
- synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
- synth.res = synth.out)
-
-synth.tables$tab.w
-```
-
 
 ###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
 
@@ -266,10 +226,6 @@ q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
 opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
 opti$par=matrix(opti$par, ncol=1)}
 ```
-```{r}
-optix=calculpoids(df.melted, 'VA')
-```
-
 
 ```{r}
 gen_liste=function(liste_value)
@@ -290,124 +246,10 @@ return(liste)
 }
 ```
 
-
-```{r}
-special=list()
-#Version avec les différentes dates version Synth
-dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = gen_liste(c("VA_pop","Emploi","W","Productivite")),
-                dependent="VA_pop", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 10, # n° de l'unité traitée
-                controls.identifier = c(1:9,11:21), #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 1999:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
-
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-```
-
-
-```{r}
-#Version sans les différentes dates
-dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors = c("VA","Emploi"), #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent="VA", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 10, # n° de l'unité traitée
-                controls.identifier = c(1:9,11:21), #n° des unités de contrôles
-                time.variable = 'temps', #col*onne où se trouve la date
-                time.optimize.ssr = 1999:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-#version a la mano
-synth.out$solution.w=optix#on remplace les poids par ceux calculés
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-```
-
-
-```{r}
- synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
-
-synth.tables$tab.w
-```
-###Pour l'emploi
-```{r}
-optiy=quiet(calculpoids(df.melted, 'Emploi'))
-```
-
-```{r}
-dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors = c("VA","Emploi"), #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent="Emploi", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2000:2012, #période de maximisation
-                time.plot=1997:2016) #période tracée sur le graphique
-
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-df.melted2
-dataprep.out=Synth::dataprep(foo=df.melted2,
-                predictors.op = "mean", #La manière dont on les prend en comptz
-                time.predictors.prior = 2012, #période pré-traitement
-                special.predictors=list(list("VA",1999,"mean")),
-                dependent="Emploi", #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:10,12:22), #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 1999:2012, #période de maximisation
-                time.plot=1995:2017) #période tracée sur le graphique
-
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-
-synth.out$solution.w=optiy#on remplace les poids par ceux calculés
-
-Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-```
-
-
-
-```{r}
- synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
- synth.res = synth.out)
-
-synth.tables$tab.w
-synth.tables$tab.v
-```
-
-
-
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
 ```{r}
 tripleSynth=function(liste_value, df.melt, pays='FRA'){
+
 #calcul des poids :
 opti=calculpoids(df.melt, liste_value[1], pays)
 special=list()
@@ -434,7 +276,8 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
-
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+poids1=synth.tables$tab.w%>%rename(poids=w.weights)
 #Version sans les différentes dates
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors = liste_value, #Les variables utilisées en contrôle
@@ -452,29 +295,22 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+ 
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+print(synth.tables$tab.w%>%inner_join(poids1, on='unit.names'))
+
 #version a la mano
 synth.out$solution.w=opti#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
 }
-tripleSynth(liste_value=c("VA", "Emploi", "W"), df.melted2, pays='FRA')
+tripleSynth(liste_value=c("VA_ind", "Emp_ind", "W"), df.melted_i, pays='FRA')
 ```
 
 ```{r}
-tripleSynth(liste_value=c("chomage"), df.melted2, pays='FRA')
+tripleSynth(liste_value=c("Emp_ind","VA_ind"), df.melted_i, pays='FRA')
 ```
-```{r}
-tripleSynth(liste_value=c("VA_pop"), df.melted2, pays='FRA')
-```
-```{r}
-tripleSynth(liste_value=c("chomage","VA_pop", "W", "Productivite", "export"), df.melted2, pays='FRA')
-```
-```{r}
-tripleSynth(liste_value=c("VA_pop", "Emploi", "W", "Productivite", "export"), df.melted2, pays='FRA')
-```
-
-
 
 ```{r}
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
@@ -604,16 +440,7 @@ qplot(x=x, y=valeur,color=noms, data=df_effe, geom="line",ylim=c(-2000,2000))+ x
 
 ```
 
-
-
-
-
-
-
 ###Tentative en normalisant###
-
-
-
 ```{r}
 SynthNorm=function(value, df.melt=df.melted,pays='FRA', date1=1999, date2=2013, date0=1997, date3=2016){
 pays_autres=length(c(table(df.melt$country)))-1
@@ -649,43 +476,16 @@ ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
 }
 SynthNorm('VA')
 ```
-#fonction essai pour raccourcir la précédante
-```{r}
-#SynthNorm=function(value, df.melt=df.melted,pays='FRA', date1=1999, date2=2013, date0=1997, date3=2016){
-pays_autres=length(c(table(df.melt$country)))-1
-Xtout=subset(df.melt)[,c(value, 'country', 'temps')]
-Xautres=Xtout[Xtout$country!=pays,][,c(value, 'temps')]
-Xpays=Xtout[Xtout$country==pays,][,c(value, 'temps')]
-Xn=matrix(Xautres[Xautres$temps<date2,][Xautres$temps>date1,][,value], nrow=pays_autres)
-Xnorm=t(scale(t(Xn)))#on normalise les données par pays(la normalisation se fait par colonne)
-Xnorm2=t(scale(t(Xautres[,value])))
 
-Xtnorm=scale(Xpays[Xpays$temps<date2 &Xpays$temps>date1,])[1:(date2-date1+1)]#on récupère les données pour la France
-
-
-#calcul des poids
-x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
-f=function(x){norm(Xtnorm-x%*%Xnorm, type="2")}
-n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
-q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
-opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
-opti$par=matrix(opti$par, ncol=1)
-#plot
-FrSynth=t(opti$par)%*%Xnorm*sd(c(Xpays))+mean(c(Xpays))
-df=data.frame(c(FrSynth, Xt))
-df$X=c(rep(2,nrow(df)/2),rep(3,nrow(df)/2))
-df$dat=c(date0:date3, date0:date3)
-ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
-  geom_line(aes(group=X))
-
-#}
-#SynthNorm('VA')
-```
 ```{r}
 SynthNorm('chomage',df.melt=df.melted_i)
 ```
 
 ```{r}
+date1=1999
+date2=2013
+date0=1997
+date3=2016
 value='VA'
 df.melt=df.melted
 pays_autres=length(c(table(df.melt$country)))-1
@@ -726,14 +526,6 @@ df$dat=c(1997:2016, 1997:2016)
 ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
   geom_line(aes(group=X))
 
-```
-```{r}
-colnames(df)
-```
-
-```{r}
-mean(c(Xt))
-sd(c(Xt))
 ```
 
 
