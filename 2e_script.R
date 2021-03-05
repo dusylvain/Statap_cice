@@ -36,6 +36,7 @@ autre_pays <- autre_pays %>% select(-c(Pays_indic, `Country Name`, `Indicator Na
   rename(country3 = `Country Code`) %>%
   select(country3, year, exports_hab, pop, `unemployment rate`) 
 
+head(autre_pays)
 #creation d'un index numérique pour chaque pays
 id <- count(compte,country2) %>% mutate(id_country = row_number()) %>% select(-n)
 

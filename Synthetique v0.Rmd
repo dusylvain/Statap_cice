@@ -329,16 +329,17 @@ a=indice_sans(df.melted_i)
 b=c(1:10,12:24)
 
 
-
-dataprep.out=Synth::dataprep(foo=df.evol,
+dataprep.out=Synth::dataprep(foo=df.melted_i,
                 predictors = (variable),#Les variables utilisées en contrôle
                 time.predictors.prior = c(2000:2011), #période pré-traitement
-                special.predictors = gen_liste("evol_VA"),
-                dependent="evol_VA", #variable d'intérêt
+                special.predictors = list(list("Emp_ind",2010:2011,"mean"),
+                                          list("Emp_ind",2004:2006,"mean"),
+                                          list("Emp_ind",2007,"mean")),
+                dependent="Emp_ind", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = b, #n° des unités de contrôles
+                controls.identifier = a, #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2010, #période de maximisation
                 time.plot=1999:2016 ) #période tracée sur le graphique
@@ -347,7 +348,7 @@ dataprep.out=Synth::dataprep(foo=df.evol,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "PIB", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft")
+Ylab = "Emploi indice 100", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft",Ylim=c(80,110))
 
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
  synth.res = synth.out)
@@ -374,6 +375,9 @@ valeur=dataprep.out$Y1-dataprep.out$Y0%*%synth.out$solution.w
 ```{r}
 numinit=2
 numend=20
+
+variable=c("Invest_pop","W","VA_ind","Productivite","export","Part_lab","chomage")
+df.melted_i
 for (i in c(numinit:numend))
 {
   #On calcul le contrôle synthétique avec l'unité i traitée
@@ -381,9 +385,9 @@ for (i in c(numinit:numend))
   a=c(1:(i-1),(i+1):21)
   dataprep_i.out=Synth::dataprep(foo=df.melted_i,
                 predictors = (variable),
-                special.predictors = list(list("Emploi",2000:2005,"mean"),list("Emploi",2010:2011,"mean")),
+                special.predictors = gen_liste("Emp_ind"),
                 time.predictors.prior = 2000:2011, 
-                dependent="Emploi", 
+                dependent="Emp_ind", 
                 unit.variable = "index", 
                 unit.names.variable="country", 
                 treatment.identifier = i, 
@@ -420,7 +424,7 @@ df_effe=filter(df2,x>2008)
 
 ```{r}
 df2$noms=as.numeric(df2$nom)
-df_RMPSE=df2%>%rename(index=noms)%>%left_join(df.melted_i[c('country','index')][1:21,])
+df_RMPSE=df2%>%rename(index=noms)%>%left_join(df.melted_i[c('country','index')][1:24,])
 df_RMPSE$valeur_sq=df_RMPSE$valeur*df_RMPSE$valeur
 RMPSE_res=group_by(df_RMPSE,index)%>% summarise(RMPSE_tot = mean(valeur_sq),country=unique(country))
 RMPSE_res$RMPSE_trait=(group_by(filter(df_RMPSE,x>2012),index)%>% summarise(mean = mean(valeur_sq),country=unique(country)))$mean
@@ -429,15 +433,20 @@ RMPSE_res$RMPSE_prev=(group_by(filter(df_RMPSE,x<2013),index)%>% summarise(mean 
 
 
 ```{r}
+RMPSE_res
 RMPSE_res%>%mutate(RMPSE_tot=sqrt(RMPSE_res$RMPSE_tot),
                    RMPSE_trait=sqrt(RMPSE_res$RMPSE_trait),
                    RMPSE_res=sqrt(RMPSE_res$RMPSE_prev)) %>%select(country,RMPSE_tot,RMPSE_trait,RMPSE_prev)
+RMPSE_res$RMPSE_ajuste=RMPSE_res$RMPSE_trait/RMPSE_res$RMPSE_prev
+RMPSE_res%>%arrange(-RMPSE_res$RMPSE_ajuste)
 ```
 
 
 ```{r}
-qplot(x=x, y=valeur,color=noms, data=df_effe, geom="line",ylim=c(-2000,2000))+ xlab("Date")+scale_color_manual(breaks = unique(df2$noms),                        values=couleur)
-
+df2$noms=as.character(df2$noms)
+qplot(x=x, y=valeur,color=noms, data=df2, geom="line",ylim=c(-20,20))+ xlab("Date")
+#+scale_color_manual(breaks = unique(df2$noms),                        values=couleur)
+df.melted_i
 ```
 
 ###Tentative en normalisant###
