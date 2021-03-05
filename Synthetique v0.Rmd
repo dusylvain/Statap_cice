@@ -189,8 +189,9 @@ a=a%>%rename(evol_VA=varb)
 base=rbind(base,a)
 }
 df.evol=df.melt%>%full_join(base,on=c('country','temps'))
-df.evol=df.evol%>%filter(temps>1997)}
-f()
+df.evol=df.evol%>%filter(temps>1997)
+return(df.evol)}
+df.evol=f()
 ```
 
 ###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
@@ -245,6 +246,45 @@ liste=as.list(liste)
 return(liste)
 }
 ```
+```{r}
+
+```
+
+###Fonction synth sans avoir à tout mettre
+```{r}
+simpleSynth=function(liste_value, df.melt=df.melted_i, pays='FRA', dateplot=1997:2016, dateopti=2000:2012){
+
+special=list()
+###création d'une liste pour les prédicteurs spéciaux
+year=seq(dateopti[1],dateopti[length(dateopti)],2)
+
+
+ind_pays=which(df.melt$country==pays)[1]
+#Version avec les différentes dates version Synth
+dataprep.out=Synth::dataprep(foo=df.melt,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                special.predictors = gen_liste(liste_value),
+                dependent=liste_value[1], #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = dateopti, #période de maximisation
+                time.plot=dateplot) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright")
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+poids1=synth.tables$tab.w%>%rename(poids=w.weights)
+print(poids1)}
+```
+```{r}
+simpleSynth(c('evol_VA'), df.melt=df.evol, dateplot=1998:2016)
+```
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
 ```{r}
@@ -297,7 +337,9 @@ Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
  
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
-print(synth.tables$tab.w%>%inner_join(poids1, on='unit.names'))
+pds=synth.tables$tab.w%>%inner_join(poids1, on='unit.names')
+pds$poids_main=opti
+print(pds)
 
 #version a la mano
 synth.out$solution.w=opti#on remplace les poids par ceux calculés
