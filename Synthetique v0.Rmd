@@ -245,8 +245,6 @@ liste=as.list(liste)
 
 return(liste)
 }
-```
-```{r}
 
 ```
 
@@ -362,26 +360,27 @@ df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)
 
 indice_sans=function(base)
 {
- df_exo=filter(df.melted_i, country !='ITA', country!='DEU')
+ df_exo=filter(df.melted_i, ! country %in% c('DEU','ITA','PRT'))
  a=unique(df_exo$index) 
  a=a[a!=11]
+ print(a)
  return(a)  
 }
-a=indice_sans(df.melted_i)
+d=c(1:10,12:24)[-indice_sans(df.melted_i)]
 b=c(1:10,12:24)
-
-
+d
+df.melted_i
 dataprep.out=Synth::dataprep(foo=df.melted_i,
                 predictors = (variable),#Les variables utilisées en contrôle
                 time.predictors.prior = c(2000:2011), #période pré-traitement
-                special.predictors = list(list("Emp_ind",2010:2011,"mean"),
-                                          list("Emp_ind",2004:2006,"mean"),
-                                          list("Emp_ind",2007,"mean")),
-                dependent="Emp_ind", #variable d'intérêt
+                special.predictors = list(list("VA_ind",seq(2000,2005),"mean"),
+                                          list("VA_ind",seq(2007,2008),"mean"),
+                                          list("VA_ind",seq(2010,2011),"mean")), 
+                dependent="VA_ind", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = a, #n° des unités de contrôles
+                controls.identifier = c(1:24)[-11], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2010, #période de maximisation
                 time.plot=1999:2016 ) #période tracée sur le graphique
@@ -390,11 +389,13 @@ dataprep.out=Synth::dataprep(foo=df.melted_i,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = "Emploi indice 100", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft",Ylim=c(80,110))
+Ylab = "Emploi indice 100", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft")
+Synth::gaps.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi indice 100", Xlab = "year")
 
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
  synth.res = synth.out)
-
+df.melted_i
 synth.tables$tab.w
 synth.tables$tab.v
 ```
@@ -417,23 +418,25 @@ valeur=dataprep.out$Y1-dataprep.out$Y0%*%synth.out$solution.w
 ```{r}
 numinit=2
 numend=20
-
+d=c(1:24)[-a]
 variable=c("Invest_pop","W","VA_ind","Productivite","export","Part_lab","chomage")
 df.melted_i
 for (i in c(numinit:numend))
 {
   #On calcul le contrôle synthétique avec l'unité i traitée
   print(i)
-  a=c(1:(i-1),(i+1):21)
+  ind_ctrl=c(1:(i-1),(i+1):21)
   dataprep_i.out=Synth::dataprep(foo=df.melted_i,
                 predictors = (variable),
-                special.predictors = gen_liste("Emp_ind"),
+                special.predictors = list(list("VA_ind",seq(2000,2005),"mean"),
+                                          list("VA_ind",seq(2007,2008),"mean"),
+                                          list("VA_ind",seq(2010,2011),"mean")),
                 time.predictors.prior = 2000:2011, 
-                dependent="Emp_ind", 
+                dependent="VA_ind", 
                 unit.variable = "index", 
                 unit.names.variable="country", 
                 treatment.identifier = i, 
-                controls.identifier =   a, 
+                controls.identifier =   ind_ctrl, 
                 time.variable = 'temps', 
                 time.optimize.ssr = 2000:2010, #
                 time.plot=1999:2016) 
@@ -486,8 +489,7 @@ RMPSE_res%>%arrange(-RMPSE_res$RMPSE_ajuste)
 
 ```{r}
 df2$noms=as.character(df2$noms)
-qplot(x=x, y=valeur,color=noms, data=df2, geom="line",ylim=c(-20,20))+ xlab("Date")
-#+scale_color_manual(breaks = unique(df2$noms),                        values=couleur)
+qplot(x=x, y=valeur,color=noms, data=df2, geom="line",ylim=c(-20,25))+ xlab("Date") +scale_color_manual(breaks = unique(df2$noms),                        values=couleur)
 df.melted_i
 ```
 

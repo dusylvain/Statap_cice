@@ -1,0 +1,72 @@
+```{r}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library("Synth")
+library(tidyverse)
+library(numDeriv)
+library(tseries)
+library('alabama')
+library("rgenoud")
+```
+
+```{r}
+
+taux_change <- read_csv("taux_change.csv")
+```
+
+```{r}
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
+date=seq(2000, 2017)
+```
+
+```{r}
+autre_pays=read.csv("WB_data2.csv")
+
+autre_pays=autre_pays%>% filter(Country.Name %in% c("France","Canada","Brasil","Mexico","Cuba","China","India","Russia","Korea, Rep.","South Africa","Nigeria","Algeria","Morocco","Australia","Japan","New Zealand","Turkey","Israel"))
+
+autre_pays <- autre_pays %>% select(-c(Pays_indic, `Country.Name`, `Indicator.Name`)) %>% pivot_longer(c(2:25), names_to = "year", values_to = "value") %>% pivot_wider(names_from = "Simple.Indicator", values_from = "value") 
+autre_pays$year=as.numeric(substr(autre_pays$year, 2, 6))
+id <- count(autre_pays,Country.Code) %>% mutate(id_country = row_number()) %>% select(-n)
+#autre_pays$year <- as.numeric(autre_pays$year)
+autre_pays<-inner_join(autre_pays,id)
+autre_pays$id_country=as.integer(autre_pays$id_country)
+autre_pays$year=as.numeric(autre_pays$year)
+df_BM=autre_pays
+```
+
+```{r}
+variable=c("exports_rate","gdb_hab","FBCF","labor_force")
+df_BM$id_country=as.integer(df_BM$id_country)
+df_BM=as.data.frame(df_BM)
+
+dataprep.out=Synth::dataprep(foo=df_BM,
+                predictors = (variable),#Les variables utilisées en contrôle
+                time.predictors.prior = c(2000:2011), #période pré-traitement
+                special.predictors = list(list("gdb_hab",2010:2011,"mean"),
+                                          list("gdb_hab",2004:2006,"mean"),
+                                          list("gdb_hab",2007,"mean")),
+                dependent="gdb_hab", #variable d'intérêt
+                unit.variable = "id_country", #colonne avec les index des pays
+                unit.names.variable="Country.Code", #nom des pays
+                treatment.identifier = 5, # n° de l'unité traitée
+                controls.identifier = c(1:4,6:15), #n° des unités de contrôles
+                time.variable = 'year', #colonne où se trouve la date
+                time.optimize.ssr = 1995:2011, #période de maximisation
+                time.plot=1999:2018 ) #période tracée sur le graphique
+
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = c("BFGS"))
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = "Emploi indice 100", Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomleft")
+
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
+ synth.res = synth.out)
+
+synth.tables$tab.pred
+synth.tables$tab.v
+```
+
+
+
