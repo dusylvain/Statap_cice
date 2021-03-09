@@ -9,6 +9,8 @@ library(tidyverse)
 library(numDeriv)
 library('alabama')
 library("rgenoud")
+library(tidyr)
+
 ```
 
 ```{r}
@@ -86,9 +88,6 @@ df.melted$country=as.character(df.melted$country)
 df.melted=inner_join(df.melted, melt_ada("LP_QI","TOT"), by=c("country","temps"))
 df.melted=inner_join(df.melted, melt_ada("LAB","TOT",croiss), by=c("country","temps"))
 
-```
-
-```{r}
 df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,LAB=value.y.y)
 ```
 
@@ -101,51 +100,42 @@ df.W$country=as.character(df.W$country)
 df.W$W=(df.W$value.x*100/df.W$value.y)*1000/df.W$value#le nombre d'heures travaillées est en milliers
 df.W$VA=as.numeric(df.W$W)
 df.W=df.W[,c('country','W', 'temps')]
-```
 
-
-#La fusion des bases : PIB, emploi, salaire réel horaire, productivité
-```{r}
 df.melted2=inner_join(df.melted, df.W, by=c("country","temps"))
 df.melted2$index=c(1:length((unique(df.melted2$country))))
 ```
 
 
-#Intégration de la population
+#Intégration de la population taux de chomage et exportations
+
 ```{r}
 df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite','LAB')]
 dfpop=subset(autre_pays,Simple.Indicator=="pop")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfpop)<-dfpop[,1]
-```
 
-```{r}
 df_pop<-t(dfpop[-c(1,2)])
 df <- data.frame(x=1995:2017, data.frame(df_pop))
 df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
 ```
 
-#Intégration du taux de chomage et exportations
+
 ```{r}
 dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfchom)<-dfchom[,1]
 dfexports=subset(autre_pays,Simple.Indicator=="exports_hab")[c("Country.Code","Simple.Indicator",lignedata)]
 rownames(dfexports)<-dfexports[,1]
-```
-```{r}
+
 df_chom<-t(dfchom[-c(1,2)])
 df <- data.frame(x=1995:2017, data.frame(df_chom))
 df.chom <- melt(df, id="x")%>%rename(country=variable, temps=x,chomage=value)
 df_exp<-t(dfexports[-c(1,2)])
 df <- data.frame(x=1995:2017, data.frame(df_exp))
 df.exp <- melt(df, id="x")%>%rename(country=variable, temps=x,export=value)
-```
 
-```{r}
 df.melted2=left_join(df.melted2,df.chom)
 df.melted2=left_join(df.melted2,df.pop)
 df.melted2=left_join(df.melted2,df.exp)
-```
-```{r}
+
 df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
 df.melted2$Part_lab=df.melted2$LAB/df.melted2$VA
 ```
@@ -157,7 +147,7 @@ df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
 df.melted_i$index=c(1:length((unique(df.melted_i$country))))
 ```
 
-#Donnée réelle
+#Donnée réelle et indice 100
 ```{r}
 taux_change2010 <- taux_change %>% filter(year == 2010) %>%
   rename(`rate2010 in NAT/US$` = `rate in NAT/US$`, country=country3) %>% select(-year)
@@ -165,25 +155,21 @@ taux_change2010 <- taux_change %>% filter(year == 2010) %>%
 df.melted_i <- df.melted_i  %>% inner_join(taux_change2010, by = "country")
 df.melted_i<-df.melted_i %>% mutate(VA_pop = VA_pop/(pop*`rate2010 in NAT/US$`))
 
-```
-
-
-#Indice 100 en 2010
-```{r}
 donn2010=df.melted_i%>%filter(temps==2010)%>%select('country','VA','Emploi')%>%rename(VA2010=VA, Emp2010=Emploi)
-donn2010
 df.melted_i=df.melted_i%>%left_join(donn2010,on="country")
-```
 
-```{r}
 df.melted_i$VA_ind=(df.melted_i$VA/df.melted_i$VA2010)*100
 df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2010)*100
-```
 
-```{r}
 df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
 ```
 
+```{r}
+donnees_bis
+df.fisc=inner_join(df.melted_i,donnees_bis%>%rename(country=country3, temps=year))
+indligneNA <- which(is.na(df.fisc),arr.ind=TRUE)[,1]
+df.fisc[unique(indligneNA),][c(1:2,22:ncol(df.fisc))]%>%arrange(by=temps)
+```
 #Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
 
 ```{r}
