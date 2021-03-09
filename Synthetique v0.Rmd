@@ -24,10 +24,11 @@ pays2lettres=read.csv('liste_pays_2lettres.csv')
 pays3lettres=read.csv('liste_pays_3lettres.csv')
 codepays=read.csv("codes_pays.csv")
 taux_change <- read_csv("taux_change.csv")
+donnee=read.csv('donnee.csv')
 ```
 
 ```{r}
-donnee=read.csv('donnee.csv')
+donnees_bis=read.csv('donnees_complementaires.csv')
 ```
 
 #les lignes avec des données
@@ -52,6 +53,13 @@ croiss=croiss%>% mutate(country = str_replace_all(croiss$country, c("EL" = "GR",
 croissbis=left_join(croiss,codepays,by="country")
 croiss=croissbis%>% rename(country3L=ISO3.digit.Alpha)
 
+```
+```{r}
+donnees_bis=donnees_bis%>% rename(taux_imposition=taux.d.imposition.sur.bÃ.nÃ.fices)
+donnees_bis=donnees_bis%>% rename(salaire_min=salaire.horaire.minimum.en.US..PPA)
+donnees_bis=donnees_bis%>% rename(protection_emploi=indice.protection.de.l.emploi)
+donnees_bis=donnees_bis%>% rename(diplome=X..des.25.64ans.diplomes.du.superieur)
+donnees_bis=donnees_bis%>% rename(IDE=IDE.entrants.en...PIB)
 ```
 
 #fonction qui permet de récupérer des dataframes utilisables sur une donnée
@@ -313,7 +321,7 @@ dataprep.out=Synth::dataprep(foo=df.melt,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Main='avec toutes les dates')
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
 poids1=synth.tables$tab.w%>%rename(poids=w.weights)
 #Version sans les différentes dates
@@ -332,7 +340,7 @@ dataprep.out=Synth::dataprep(foo=df.melt,
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Main='avec la moyenne')
  
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
 pds=synth.tables$tab.w%>%inner_join(poids1, on='unit.names')
@@ -343,13 +351,13 @@ print(pds)
 synth.out$solution.w=opti#on remplace les poids par ceux calculés
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
-Ylab = liste_value[1], Xlab = "year", Legend = c("France", "synthetic France"), Legend.position = "bottomright")
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Main ='à la main')
 }
-tripleSynth(liste_value=c("VA_ind", "Emp_ind", "W"), df.melted_i, pays='FRA')
+tripleSynth(liste_value=c("VA_ind", "Emp_ind", "W"), df.melted_i, pays='GBR')
 ```
 
 ```{r}
-tripleSynth(liste_value=c("Emp_ind","VA_ind"), df.melted_i, pays='FRA')
+tripleSynth(liste_value=c("Emp_ind","VA_ind", "Productivite", "export", "W"), df.melted_i, pays='ITA')
 ```
 
 ```{r}
