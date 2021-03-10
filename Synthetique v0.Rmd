@@ -177,19 +177,22 @@ df.fisc$index=c(1:length((unique(df.fisc$country))))
 #Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
 
 ```{r}
-f=function(varb='VA', df.melt=df.melted_i, df.evol=df.evol){
+f=function(variabl=c('VA'), df.melt=df.melted_i, df.evol=df.evol){
 base=NULL
 #On peut facilement rajouter les évolutions des autres var en changeant un tt petit peu le code
+
 for (pays in unique(df.melt$country)){
-a=df.melt%>%filter(country==pays)%>%select(temps,country, varb)
-a[,varb][2:nrow(a)]=diff(a[,varb])/a[,varb][2:nrow(a)]*100
-a=a%>%rename(evol_VA=varb)
-base=rbind(base,a)
-}
+a=df.melt%>%filter(country==pays)%>%select(temps,country, variabl)
+
+a[,variabl][2:nrow(a)]=diff(a[,variabl])/a[,variabl][2:nrow(a)]*100
+a=a%>%rename(evol_VA=variabl)
+base=rbind(base,a)}
 df.evol=df.melt%>%full_join(base,on=c('country','temps'))
 df.evol=df.evol%>%filter(temps>1997)
 return(df.evol)}
-df.evol=f()
+df.evol=f('Emploi')
+df.evol=df.evol%>%rename(evol_Emp=evol_VA)
+df.evol=f('VA', df.melt=df.evol)
 ```
 
 ###Le calcul des poids optimaux pour l'ensemble de la période d'optimisation
@@ -295,7 +298,7 @@ special=list()
 ###création d'une liste pour les prédicteurs spéciaux
 year=seq(date0,date2,2)
 
-ind_pays=which(df.melt$country==pays)[1]
+ind_pays=as.numeric(df.melt[df.melt$country=='FRA',]$index[1])
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors.op = "mean", #La manière dont on les prend en compte
@@ -354,6 +357,11 @@ tripleSynth(liste_value=c("VA_ind"), df.melted_i, pays='GBR', date1=2005)
 ```{r}
 tripleSynth(liste_value=c("Emp_ind","VA_ind", "Productivite", "export", "W", "taux_imposition"), df.fisc, pays='FRA', date0=2000, date1=2005)
 ```
+```{r}
+
+tripleSynth(liste_value=c("evol_Emp","evol_VA"), df.evol, pays='FRA', date0=2000, date1=2005)
+```
+
 
 ```{r}
 df.melted_i$Emploi_scale<-scale(df.melted_i$Emploi)

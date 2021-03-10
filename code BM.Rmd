@@ -68,5 +68,38 @@ synth.tables$tab.pred
 synth.tables$tab.v
 ```
 
+```{r}
+simpleSynthBM=function(liste_value, df.melt=df_BM, pays='FRA', dateplot=1997:2016, dateopti=2000:2012){
+special=list()
+year=seq(dateopti[1],dateopti[length(dateopti)],2)
+ind_pays=as.numeric(df.melt[df.melt$Country.Code=='FRA',]$id_country[1])
+#Version avec les différentes dates version Synth
+dataprep.out=Synth::dataprep(foo=df.melt,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                special.predictors = list(list("gdb_hab",2010:2011,"mean"),
+                                          list("gdb_hab",2004:2006,"mean"),
+                                          list("gdb_hab",2007,"mean")),
+                dependent=liste_value[1], #variable d'intérêt
+                unit.variable = "id_country", #colonne avec les index des pays
+                unit.names.variable="Country.Code", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(1:max(df.melt$id_country))[-ind_pays], #n° des unités de contrôles
+                time.variable = 'year', #colonne où se trouve la date
+                time.optimize.ssr = dateopti, #période de maximisation
+                time.plot=dateplot) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright")
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+poids1=synth.tables$tab.w%>%rename(poids=w.weights)
+print(poids1)}
+```
+```{r}
+simpleSynthBM(c('gdb_hab', 'exports.hab', 'unemployment rate'))
+```
+
 
 
