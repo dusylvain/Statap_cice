@@ -164,12 +164,16 @@ df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2010)*100
 df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
 ```
 
+
 ```{r}
 donnees_bis
 df.fisc=inner_join(df.melted_i,donnees_bis%>%rename(country=country3, temps=year))
 indligneNA <- which(is.na(df.fisc),arr.ind=TRUE)[,1]
 df.fisc[unique(indligneNA),][c(1:2,22:ncol(df.fisc))]%>%arrange(by=temps)
+df.fisc=df.fisc[df.fisc$temps>1999,]#on a pas tous les pays pourles premières années, donc on prend à partir de 2000
+df.fisc$index=c(1:length((unique(df.fisc$country))))
 ```
+
 #Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
 
 ```{r}
@@ -223,10 +227,10 @@ opti$par=matrix(opti$par, ncol=1)}
 ```
 
 ```{r}
-gen_liste=function(liste_value)
+gen_liste=function(liste_value, date1=1999, date2=2012)
 {
 a=0
-year=seq(1999,2012,2)
+year=seq(date1,date2,2)
 for(i in liste_value ){
   for (j in year){
     a=a+1
@@ -242,9 +246,12 @@ return(liste)
 
 ```
 
+
+
 ###Fonction synth sans avoir à tout mettre
 ```{r}
 simpleSynth=function(liste_value, df.melt=df.melted_i, pays='FRA', dateplot=1997:2016, dateopti=2000:2012){
+
 
 special=list()
 ###création d'une liste pour les prédicteurs spéciaux
@@ -280,29 +287,28 @@ simpleSynth(c('evol_VA'), df.melt=df.evol, dateplot=1998:2016)
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
 ```{r}
-tripleSynth=function(liste_value, df.melt, pays='FRA'){
+tripleSynth=function(liste_value, df.melt, pays='FRA', date0=1999, date1=2000, date2=2012, date3=2016){
 
 #calcul des poids :
 opti=calculpoids(df.melt, liste_value[1], pays)
 special=list()
 ###création d'une liste pour les prédicteurs spéciaux
-year=seq(1999,2012,2)
+year=seq(date0,date2,2)
 
-gen_liste(liste_value)
 ind_pays=which(df.melt$country==pays)[1]
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = gen_liste(liste_value),
+                special.predictors = gen_liste(liste_value, date1=date1, date2=date2),
                 dependent=liste_value[1], #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = ind_pays, # n° de l'unité traitée
                 controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 1999:2012, #période de maximisation
-                time.plot=1997:2016) #période tracée sur le graphique
+                time.optimize.ssr = date1:date2, #période de maximisation
+                time.plot=date0:date3) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
@@ -321,8 +327,8 @@ dataprep.out=Synth::dataprep(foo=df.melt,
                 treatment.identifier = ind_pays, # n° de l'unité traitée
                 controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = 2005:2012, #période de maximisation
-                time.plot=1997:2016) #période tracée sur le graphique
+                time.optimize.ssr = date1:date2, #période de maximisation
+                time.plot=date0:date3) #période tracée sur le graphique
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
@@ -339,11 +345,14 @@ synth.out$solution.w=opti#on remplace les poids par ceux calculés
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Main ='à la main')
 }
-tripleSynth(liste_value=c("VA_ind", "Emp_ind", "W"), df.melted_i, pays='GBR')
+tripleSynth(liste_value=c("VA_ind"), df.melted_i, pays='GBR', date1=2005)
 ```
 
+
+
+
 ```{r}
-tripleSynth(liste_value=c("Emp_ind","VA_ind", "Productivite", "export", "W"), df.melted_i, pays='ITA')
+tripleSynth(liste_value=c("Emp_ind","VA_ind", "Productivite", "export", "W", "taux_imposition"), df.fisc, pays='FRA', date0=2000, date1=2005)
 ```
 
 ```{r}
