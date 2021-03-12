@@ -230,12 +230,12 @@ opti$par=matrix(opti$par, ncol=1)}
 ```
 
 ```{r}
-gen_liste=function(liste_value, date1=1999, date2=2012)
+gen_liste=function(liste_value, date=c(list(2000:2007), list(2008:2011), 2012))
 {
 a=0
-year=seq(date1,date2,2)
+
 for(i in liste_value ){
-  for (j in year){
+  for (j in date){
     a=a+1
     if(a==1){liste=list(list(i,j, "mean"))}
     
@@ -285,7 +285,7 @@ poids1=synth.tables$tab.w%>%rename(poids=w.weights)
 print(poids1)}
 ```
 ```{r}
-simpleSynth(c('evol_VA'), df.melt=df.evol, dateplot=1998:2016)
+simpleSynth(c('evol_Empj'), df.melt=df.evol, dateplot=1998:2016)
 ```
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
@@ -429,7 +429,7 @@ valeur=dataprep.out$Y1-dataprep.out$Y0%*%synth.out$solution.w
 ```{r}
 numinit=2
 numend=20
-d=c(1:24)[-a]
+d=c(1:24)
 variable=c("Invest_pop","W","VA_ind","Productivite","export","Part_lab","chomage")
 df.melted_i
 for (i in c(numinit:numend))
