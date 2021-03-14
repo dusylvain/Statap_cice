@@ -27,13 +27,16 @@ autre_pays=autre_pays%>% filter(Country.Name %in% c("France","Canada","Brasil","
 
 autre_pays <- autre_pays %>% select(-c(Pays_indic, `Country.Name`, `Indicator.Name`)) %>% pivot_longer(c(2:25), names_to = "year", values_to = "value") %>% pivot_wider(names_from = "Simple.Indicator", values_from = "value") 
 autre_pays$year=as.numeric(substr(autre_pays$year, 2, 6))
-id <- count(autre_pays,Country.Code) %>% mutate(id_country = row_number()) %>% select(-n)
-#autre_pays$year <- as.numeric(autre_pays$year)
-autre_pays<-inner_join(autre_pays,id)
+id <- as.data.frame(count(autre_pays,Country.Code))  %>% select(-n)
+id[,'id_country']=as.numeric(c(1:length(unique(autre_pays$Country.Code))))
+autre_pays<-as.data.frame(inner_join(autre_pays,id))
 autre_pays$id_country=as.integer(autre_pays$id_country)
 autre_pays$year=as.numeric(autre_pays$year)
 df_BM=autre_pays
 ```
+
+
+
 
 ```{r}
 donn2010=df_BM%>%filter(year==2010)%>%select('Country.Code','gdb_hab')%>%rename(gdp_hab2010=gdb_hab)
@@ -52,10 +55,10 @@ dataprep.out=Synth::dataprep(foo=df_BM,
                                           list("gdb_hab",2004:2006,"mean"),
                                           list("gdb_hab",2007,"mean")),
                 dependent="gdb_hab", #variable d'intérêt
-                unit.variable = "id_country", #colonne avec les index des pays
+                unit.variable = 'id_country', #colonne avec les index des pays
                 unit.names.variable="Country.Code", #nom des pays
-                treatment.identifier = 5, # n° de l'unité traitée
-                controls.identifier = c(1:4,6:15), #n° des unités de contrôles
+                treatment.identifier = 8, # n° de l'unité traitée
+                controls.identifier = c(1:7,9:15), #n° des unités de contrôles
                 time.variable = 'year', #colonne où se trouve la date
                 time.optimize.ssr = 1995:2011, #période de maximisation
                 time.plot=1999:2018 ) #période tracée sur le graphique
@@ -72,6 +75,9 @@ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,
 synth.tables$tab.pred
 synth.tables$tab.v
 ```
+
+
+
 ```{r}
 gen_liste=function(liste_value, date=c(list(2000:2007), list(2008:2011), 2012))
 {

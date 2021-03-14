@@ -82,6 +82,7 @@ df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","
 compte%>%filter(country=="JP",code=="TOT",var=="EMP") #on perd le japon a cause de 2 NA sur l'emploi
 
 df.melted$index=c(1:length((unique(df.melted$country))))
+mode(df.melted[,'index'])
 df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
 df.melted$country=as.character(df.melted$country)
 
@@ -285,7 +286,7 @@ poids1=synth.tables$tab.w%>%rename(poids=w.weights)
 print(poids1)}
 ```
 ```{r}
-simpleSynth(c('evol_Empj'), df.melt=df.evol, dateplot=1998:2016)
+simpleSynth(c('evol_Emp'), df.melt=df.evol, dateplot=1998:2016)
 ```
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
