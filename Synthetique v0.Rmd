@@ -210,7 +210,7 @@ quiet <- function(x) {
 ```
 
 ```{r}
-calculpoids=function(df.melted, value, pays='FRA'){
+calculpoids=function(df.melted, value, pays='FRA', poids_max=TRUE){
   #préparation des données
 pays_autres=length(c(table(df.melted$country)))-1
 Xt=subset(df.melted, country==pays& temps<2013 &temps>1999)
@@ -225,6 +225,7 @@ Xn=matrix(Xn[,value], nrow=pays_autres)
 x0=c(rep(1/pays_autres,pays_autres))#on crée un vecteur de départ au hasard
 f=function(x){norm(Xt-x%*%Xn, type="2")}
 n=function(x){x}#contrainte de positivité des poids (hin(x)>0)
+if(poids_max==TRUE){n=function(x){c(x, 0.25-x)}}
 q=function(x){sum(x)-1}#fonction de la contrainte d'égalité (heq(x)=0)
 opti=quiet(auglag(x0, f, hin=n, heq=q))#fonction d'optimisation sur toute la période
 opti$par=matrix(opti$par, ncol=1)}
@@ -299,12 +300,12 @@ special=list()
 ###création d'une liste pour les prédicteurs spéciaux
 year=seq(date0,date2,2)
 
-ind_pays=as.numeric(df.melt[df.melt$country=='FRA',]$index[1])
+ind_pays=as.numeric(df.melt[df.melt$country==pays,]$index[1])
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df.melt,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = 2012, #période pré-traitement
-                special.predictors = gen_liste(liste_value, date1=date1, date2=date2),
+                special.predictors = gen_liste(liste_value),
                 dependent=liste_value[1], #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
@@ -361,6 +362,39 @@ tripleSynth(liste_value=c("Emp_ind","VA_ind", "Productivite", "export", "W", "ta
 ```{r}
 
 tripleSynth(liste_value=c("evol_Emp","evol_VA"), df.evol, pays='FRA', date0=2000, date1=2005)
+```
+
+```{r}
+graph_strat=function(solpoids=synth.out$solution.w, df.melt=df.melted_i, valeur='VA'){
+a=1
+newrow=data.frame(valeur=df.melted_i[df.melted_i$index==a,]$VA, temps=1997:2016, index=1)
+dfstrat=newrow
+for(poids in synth.out$solution.w){
+  if(a>1){newrow=newrow+data.frame(valeur=df.melted_i[df.melted_i$index==a,]$VA, temps=0, index=1)
+   dfstrat=rbind(dfstrat, newrow) 
+  }
+  a=a+1
+}
+ggplot(data=dfstrat,aes(x=temps, valeur)) +
+  geom_line(aes(group=index), colour=rainbow(440))}
+```
+
+
+```{r}
+dataprep.out=Synth::dataprep(foo=df.melted_i,
+                predictors = 'VA', #Les variables utilisées en contrôle
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                dependent='VA', #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = 11, # n° de l'unité traitée
+                controls.identifier = c(1:23)[-11], #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = 2000:2014, #période de maximisation
+                time.plot=1997:2016) #période tracée sur le graphique
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+graph_strat()
 ```
 
 
@@ -592,6 +626,10 @@ ggplot(data=df,aes(x=dat, c.FrSynth..Xt., col=X)) +
   geom_line(aes(group=X))
 
 ```
+
+
+
+
 
 
 
