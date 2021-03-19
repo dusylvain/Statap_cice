@@ -10,6 +10,8 @@ library(numDeriv)
 library('alabama')
 library("rgenoud")
 library(tidyr)
+library(optimx)
+library(kernlab)
 
 ```
 
@@ -414,11 +416,11 @@ dataprep.out=Synth::dataprep(foo=df.melted_i,
                 time.predictors.prior = c(2000:2011), #période pré-traitement
                 special.predictors = list(list("VA_ind",seq(2000,2007),"mean"),
                                           list("VA_ind",seq(2010,2011),"mean")), 
-                dependent="chomage", #variable d'intérêt
+                dependent="VA_ind", #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = 11, # n° de l'unité traitée
-                controls.identifier = c(1:24)[-11], #n° des unités de contrôles
+                controls.identifier = b[-d], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = 2000:2010, #période de maximisation
                 time.plot=1999:2016,
