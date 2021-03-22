@@ -388,39 +388,49 @@ synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 solpoids=synth.out$solution.w
 poidstri=order(solpoids, decreasing=TRUE)[1:8]
 #puis on construit les séries augmentées
-#initialisation
+##problème : on n'a pas enlevé le pays considéré !
 a=1
 poids_pays=data.frame(poids=solpoids[1],country=unique(df.melt[df.melt$index==a,]$country), index=1)
-newrow=data.frame(valeur=df.melt[df.melt$index==a,][,valeur]*solpoids[1], temps=1997:2016, index=1)
+newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*solpoids[1], index=1)
 dfstrat=newrow
-#boucle sur les pays pour agréger
+
 for(poids in solpoids){
   if(a>1 & a!=ind_pays){
-   newrow=newrow+data.frame(valeur=df.melt[df.melt$index==a,][,valeur]*poids, temps=0, index=1)
+   newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*poids, index=a)
    dfstrat=rbind(dfstrat, newrow) 
-   poids_pays=rbind(poids_pays, data.frame(poids=poids, country=unique(df.melt[df.melt$index==a,]$country), index=a))
-   }
-   if(a==ind_pays){newrow=newrow+data.frame(valeur=rep(0,date3-date0+1), temps=0, index=1)
-   print(newrow)
-   }
-   
-  
+  }
   a=a+1
 }
 
-dfstrat=left_join(dfstrat, poids_pays)
-poids_pays=order(poids_pays, decreasing=TRUE)
+numgrand=order(dfstrat$valeur, decreasing=TRUE)
+for (num in 1:length(numgrand)){
+  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
 
+newrow=df.melt[df.melt$index==numgrand[1],][,valeur]*solpoids[numgrand[1]]
+newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[1],]$country), temps=1997:2016)
+dfstratfin=newdata
 
-ggplot(data=dfstrat,aes(x=temps, valeur)) +
-  geom_line(aes(group=index, col=country))  
+for(pays in 2:(max(df.melt$index)-2)){
+   newrow=newrow+df.melt[df.melt$index==numgrand[pays],][,valeur]*solpoids[numgrand[pays]]
+   print(newrow)
+   if (pays<6){
+     newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[pays],]$country), temps=1997:2016)
+   dfstratfin=rbind(dfstratfin, newdata) 
+   }
+   if(pays==max(df.melt$index)-2){
+     newdata=data.frame(valeur=newrow, country='autres', temps=1997:2016)
+     dfstratfin=rbind(dfstratfin, newdata)
+     }
+}
+
+ggplot(data=dfstratfin,aes(x=temps, valeur)) +
+  geom_line(aes(group=country, col=country))  
 }
 graph_strat(liste_value='VA')
 ```
-
 ```{r}
 df.melt=df.melted_i
-liste_value='Emp_ind'
+liste_value='VA'
 pays='FRA'
 date0=1997
 date1=2005
@@ -444,36 +454,49 @@ date3=2016
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 solpoids=synth.out$solution.w
 poidstri=order(solpoids, decreasing=TRUE)[1:8]
+```
+
+```{r}
+
 #puis on construit les séries augmentées
 ##problème : on n'a pas enlevé le pays considéré !
 a=1
 poids_pays=data.frame(poids=solpoids[1],country=unique(df.melt[df.melt$index==a,]$country), index=1)
-newrow=data.frame(valeur=df.melt[df.melt$index==a,]$VA*solpoids[1], temps=1997:2016, index=1)
+newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*solpoids[1], index=1)
 dfstrat=newrow
 
 for(poids in solpoids){
   if(a>1 & a!=ind_pays){
-   newrow=newrow+data.frame(valeur=df.melt[df.melt$index==a,]$VA*poids, temps=0, index=1)
+   newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*poids, index=a)
    dfstrat=rbind(dfstrat, newrow) 
-   poids_pays=rbind(poids_pays, data.frame(poids=poids, country=unique(df.melt[df.melt$index==a,]$country), index=a))
-   }
-   if(a==ind_pays){newrow=newrow+data.frame(valeur=rep(0,date3-date0+1), temps=0, index=1)
-   print(newrow)
-   }
-   
-  
+  }
   a=a+1
 }
 
-dfstrat=left_join(dfstrat, poids_pays)
-poids_pays=order(poids_pays, decreasing=TRUE)
-print(poids_pays)
+numgrand=order(dfstrat$valeur, decreasing=TRUE)
+for (num in 1:length(numgrand)){
+  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
 
-ggplot(data=dfstrat,aes(x=temps, valeur)) +
-  geom_line(aes(group=index, col=country)) 
+newrow=df.melt[df.melt$index==numgrand[1],][,valeur]*solpoids[numgrand[1]]
+newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[1],]$country), temps=1997:2016)
+dfstratfin=newdata
+
+for(pays in 2:(max(df.melt$index)-2)){
+   newrow=newrow+df.melt[df.melt$index==numgrand[pays],][,valeur]*solpoids[numgrand[pays]]
+   print(newrow)
+   if (pays<6){
+     newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[pays],]$country), temps=1997:2016)
+   dfstratfin=rbind(dfstratfin, newdata) 
+   }
+   if(pays==max(df.melt$index)-2){
+     newdata=data.frame(valeur=newrow, country='autres', temps=1997:2016)
+     dfstratfin=rbind(dfstratfin, newdata)
+     }
+}
+
+ggplot(data=dfstratfin,aes(x=temps, valeur)) +
+  geom_line(aes(group=country, col=country)) 
 ```
-
-
 
 
 
