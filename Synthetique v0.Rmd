@@ -252,7 +252,72 @@ return(liste)
 }
 
 ```
+###la fonction avec stratification du synthétique
 
+
+
+```{r}
+graph_strat=function(df.melt=df.melted_i, liste_value='VA', pays='FRA', date0=1997, date1=2005, date2=2012, date3=2016, synthdon=TRUE, synth.out=0){
+  valeur=liste_value[1]
+  #on récupère les poids
+  ind_pays=as.numeric(df.melt[df.melt$country==pays,]$index[1])
+  if(synthdon){dataprep.out=Synth::dataprep(foo=df.melt,
+                predictors = liste_value, #Les variables utilisées en contrôle
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = 2012, #période pré-traitement
+                dependent=liste_value[1], #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(1:max(df.melted_i$index))[-ind_pays], #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = date1:date2, #période de maximisation
+                time.plot=date0:date3) #période tracée sur le graphique
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")}else{synth.out=synth.out}
+solpoids=synth.out$solution.w
+#puis on construit les séries augmentées
+a=1
+
+newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*solpoids[1], index=1,country=unique(df.melt[df.melt$index==a,]$country))
+dfstrat=newrow
+
+for(poids in solpoids){
+  if(a>1 & a!=ind_pays){
+   newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*poids, index=a,country=unique(df.melt[df.melt$index==a,]$country))
+   dfstrat=rbind(dfstrat, newrow) 
+  }
+  a=a+1
+}
+
+numgrand=order(dfstrat$valeur, decreasing=TRUE)
+dfstrat=dfstrat[order(dfstrat$valeur, decreasing=TRUE),]
+
+for (num in 1:length(numgrand)){
+  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
+
+newrow=df.melt[df.melt$index==numgrand[1] & df.melt$temps>date0-1 & df.melt$temps<date3+1,][,valeur]*solpoids[numgrand[1]]
+newdata=data.frame(valeur=newrow, country=unique(dfstrat[dfstrat$index==numgrand[1],]$country), temps=date0:date3)
+dfstratfin=newdata
+
+for(pays in 2:(max(df.melt$index)-2)){
+   newrow=newrow+df.melt[df.melt$index==numgrand[pays]& df.melt$temps>date0-1 & df.melt$temps<date3+1,][,valeur]*solpoids[numgrand[pays]]
+   if (pays<6){
+     newdata=data.frame(valeur=newrow, country=unique(dfstrat[dfstrat$index==numgrand[pays],]$country), temps=date0:date3)
+   dfstratfin=rbind(dfstratfin, newdata) 
+   }
+   if(pays==max(df.melt$index)-2){
+     newdata=data.frame(valeur=newrow, country='autres', temps=date0:date3)
+     dfstratfin=rbind(dfstratfin, newdata)
+     }
+}
+
+ggplot(data=dfstratfin,aes(x=temps, valeur)) +
+  geom_line(aes(group=country, col=country))  
+}
+```
+```{r}
+graph_strat(liste_value='VA')
+```
 
 
 ###Fonction synth sans avoir à tout mettre
@@ -286,11 +351,14 @@ Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright")
 synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
 poids1=synth.tables$tab.w%>%rename(poids=w.weights)
-print(poids1)}
+print(poids1)
+graph_strat(df.melt=df.melt, liste_value=liste_value, pays=pays, date0=dateplot[1], date1=dateopti[1], date2=dateopti[length(dateopti)], date3=dateplot[length(dateplot)], synth.out= synth.out, synthdon=FALSE)}
 ```
 ```{r}
-simpleSynth(c('evol_Emp'), df.melt=df.evol, dateplot=1998:2016)
+simpleSynth(c('VA'), df.melt=df.melted_i, dateplot=1998:2016)
 ```
+
+
 
 ###Une fonction pour afficher le contrôle synthétique avec la fonction de base, celle en s'apesantissant sur les poids et celle en calculant les poids à part
 ```{r}
@@ -367,136 +435,14 @@ tripleSynth(liste_value=c("evol_Emp","evol_VA"), df.evol, pays='FRA', date0=2000
 ```
 
 
-```{r}
-graph_strat=function(df.melt=df.melted_i, liste_value='VA', pays='FRA', date0=1997, date1=2005, date2=2012, date3=2016){
-  valeur=liste_value[1]
-  #on récupère les poids
-  ind_pays=as.numeric(df.melt[df.melt$country==pays,]$index[1])
-  dataprep.out=Synth::dataprep(foo=df.melt,
-                predictors = liste_value, #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent=liste_value[1], #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melted_i$index))[-ind_pays], #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = date1:date2, #période de maximisation
-                time.plot=date0:date3) #période tracée sur le graphique
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-solpoids=synth.out$solution.w
-poidstri=order(solpoids, decreasing=TRUE)[1:8]
-#puis on construit les séries augmentées
-##problème : on n'a pas enlevé le pays considéré !
-a=1
-poids_pays=data.frame(poids=solpoids[1],country=unique(df.melt[df.melt$index==a,]$country), index=1)
-newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*solpoids[1], index=1)
-dfstrat=newrow
 
-for(poids in solpoids){
-  if(a>1 & a!=ind_pays){
-   newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*poids, index=a)
-   dfstrat=rbind(dfstrat, newrow) 
-  }
-  a=a+1
-}
 
-numgrand=order(dfstrat$valeur, decreasing=TRUE)
-for (num in 1:length(numgrand)){
-  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
 
-newrow=df.melt[df.melt$index==numgrand[1],][,valeur]*solpoids[numgrand[1]]
-newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[1],]$country), temps=1997:2016)
-dfstratfin=newdata
 
-for(pays in 2:(max(df.melt$index)-2)){
-   newrow=newrow+df.melt[df.melt$index==numgrand[pays],][,valeur]*solpoids[numgrand[pays]]
-   print(newrow)
-   if (pays<6){
-     newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[pays],]$country), temps=1997:2016)
-   dfstratfin=rbind(dfstratfin, newdata) 
-   }
-   if(pays==max(df.melt$index)-2){
-     newdata=data.frame(valeur=newrow, country='autres', temps=1997:2016)
-     dfstratfin=rbind(dfstratfin, newdata)
-     }
-}
 
-ggplot(data=dfstratfin,aes(x=temps, valeur)) +
-  geom_line(aes(group=country, col=country))  
-}
-graph_strat(liste_value='VA')
-```
-```{r}
-df.melt=df.melted_i
-liste_value='VA'
-pays='FRA'
-date0=1997
-date1=2005
-date2=2012
-date3=2016
-  valeur=liste_value[1]
-  #on récupère les poids
-  ind_pays=as.numeric(df.melt[df.melt$country==pays,]$index[1])
-  dataprep.out=Synth::dataprep(foo=df.melt,
-                predictors = liste_value, #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent=liste_value[1], #variable d'intérêt
-                unit.variable = "index", #colonne avec les index des pays
-                unit.names.variable="country", #nom des pays
-                treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melted_i$index))[-ind_pays], #n° des unités de contrôles
-                time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = date1:date2, #période de maximisation
-                time.plot=date0:date3) #période tracée sur le graphique
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
-solpoids=synth.out$solution.w
-poidstri=order(solpoids, decreasing=TRUE)[1:8]
-```
 
-```{r}
 
-#puis on construit les séries augmentées
-##problème : on n'a pas enlevé le pays considéré !
-a=1
-poids_pays=data.frame(poids=solpoids[1],country=unique(df.melt[df.melt$index==a,]$country), index=1)
-newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*solpoids[1], index=1)
-dfstrat=newrow
 
-for(poids in solpoids){
-  if(a>1 & a!=ind_pays){
-   newrow=data.frame(valeur=df.melt[df.melt$index==a & df.melt$temps==2016,][,valeur]*poids, index=a)
-   dfstrat=rbind(dfstrat, newrow) 
-  }
-  a=a+1
-}
-
-numgrand=order(dfstrat$valeur, decreasing=TRUE)
-for (num in 1:length(numgrand)){
-  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
-
-newrow=df.melt[df.melt$index==numgrand[1],][,valeur]*solpoids[numgrand[1]]
-newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[1],]$country), temps=1997:2016)
-dfstratfin=newdata
-
-for(pays in 2:(max(df.melt$index)-2)){
-   newrow=newrow+df.melt[df.melt$index==numgrand[pays],][,valeur]*solpoids[numgrand[pays]]
-   print(newrow)
-   if (pays<6){
-     newdata=data.frame(valeur=newrow, country=unique(df.melt[df.melt$index==numgrand[pays],]$country), temps=1997:2016)
-   dfstratfin=rbind(dfstratfin, newdata) 
-   }
-   if(pays==max(df.melt$index)-2){
-     newdata=data.frame(valeur=newrow, country='autres', temps=1997:2016)
-     dfstratfin=rbind(dfstratfin, newdata)
-     }
-}
-
-ggplot(data=dfstratfin,aes(x=temps, valeur)) +
-  geom_line(aes(group=country, col=country)) 
-```
 
 
 
