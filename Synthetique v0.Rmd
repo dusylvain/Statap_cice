@@ -269,7 +269,7 @@ graph_strat=function(df.melt=df.melted_i, liste_value='VA', pays='FRA', date0=19
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melted_i$index))[-ind_pays], #n° des unités de contrôles
+                controls.identifier = c(1:max(df.melt$index))[-ind_pays], #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
                 time.optimize.ssr = date1:date2, #période de maximisation
                 time.plot=date0:date3) #période tracée sur le graphique
