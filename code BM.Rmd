@@ -99,67 +99,210 @@ return(liste)
 ```
 
 
+
 ```{r}
-graph_stratBM=function(df.melt=df_BM, liste_value='gdb_hab', pays='FRA', date0=1997, date1=2005, date2=2012, date3=2016, synthdon=TRUE, synth.out=0){
-  valeur=liste_value[1]
-  #on récupère les poids
-  ind_pays=as.numeric(df.melt[df.melt$Country.Code==pays,]$id_country[1])
-  if(synthdon){dataprep.out=Synth::dataprep(foo=df.melt,
-                predictors = liste_value, #Les variables utilisées en contrôle
-                predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = 2012, #période pré-traitement
-                dependent=liste_value[1], #variable d'intérêt
-                unit.variable = "id_country", #colonne avec les index des pays
-                unit.names.variable="Country.Code", #nom des pays
-                treatment.identifier = ind_pays, # n° de l'unité traitée
-                controls.identifier = c(1:max(df.melt$id_country))[-ind_pays], #n° des unités de contrôles
-                time.variable = 'year', #colonne où se trouve la date
-                time.optimize.ssr = date1:date2, #période de maximisation
-                time.plot=date0:date3) #période tracée sur le graphique
-synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")}else{synth.out=synth.out}
-solpoids=synth.out$solution.w
-#puis on construit les séries augmentées
-a=1
-
-newrow=data.frame(valeur=df.melt[df.melt$id_country==a & df.melt$year==2016,][,valeur]*solpoids[1], index=1,country=unique(df.melt[df.melt$id_country==a,]$Country.Code))
-dfstrat=newrow
-
-for(poids in solpoids){
-  if(a>1 & a!=ind_pays){
-   newrow=data.frame(valeur=df.melt[df.melt$id_country==a & df.melt$year==2016,][,valeur]*poids, index=a,country=unique(df.melt[df.melt$id_country==a,]$Country.Code))
-   dfstrat=rbind(dfstrat, newrow) 
-  }
-  a=a+1
-}
-
-numgrand=order(dfstrat$valeur, decreasing=TRUE)
-dfstrat=dfstrat[order(dfstrat$valeur, decreasing=TRUE),]
-
-for (num in 1:length(numgrand)){
-  if(numgrand[num]>=ind_pays){numgrand[num]=numgrand[num]+1}}#on compense l'absence de la France
-
-newrow=df.melt[df.melt$id_country==numgrand[1] & df.melt$year>date0-1 & df.melt$year<date3+1,][,valeur]*solpoids[numgrand[1]]
-newdata=data.frame(valeur=newrow, country=unique(dfstrat[dfstrat$index==numgrand[1],]$country), temps=date0:date3)
-dfstratfin=newdata
-
-for(pays in 2:(max(df.melt$id_country)-2)){
-   newrow=newrow+df.melt[df.melt$id_country==numgrand[pays]& df.melt$year>date0-1 & df.melt$year<date3+1,][,valeur]*solpoids[numgrand[pays]]
-   if (pays<6){
-     newdata=data.frame(valeur=newrow, country=unique(dfstrat[dfstrat$index==numgrand[pays],]$country), temps=date0:date3)
-   dfstratfin=rbind(dfstratfin, newdata) 
-   }
-   if(pays==max(df.melt$id_country)-2){
-     newdata=data.frame(valeur=newrow, country='autres', temps=date0:date3)
-     dfstratfin=rbind(dfstratfin, newdata)
-     }
-}
-
-ggplot(data=dfstratfin,aes(x=temps, valeur)) +
-  geom_line(aes(group=country, col=country))  
-}
+df_stratTitouanBM(df.melt=df_BM)
 ```
 ```{r}
-graph_stratBM()
+df.melt=df_BM
+liste_value='gdb_hab'
+pays='FRA'
+date0=2000
+date1=2005
+date2=2012
+date3=2016
+ordonnee = NA
+nb_country_plot = 5
+synthdon=FALSE
+synth.out=0
+dataprep.out=0
+valeur=liste_value[1]
+ind_pays= unique(subset(df.melt, Country.Code == pays)['id_country'])[1, 1]
+dateopti = date0:date3
+
+if(synthdon==FALSE){
+dataprep.out=Synth::dataprep(foo=df.melt,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = date2, #période pré-traitement
+                special.predictors = gen_liste(liste_value, c(date1:2009,2011:date2)),
+                dependent=liste_value[1], #variable d'intérêt
+                unit.variable = 'id_country', #colonne avec les index des pays
+                unit.names.variable="Country.Code", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(unique(subset(df.melt, Country.Code!=pays)['id_country'])[,1]), #n° des unités de contrôles
+                time.variable = 'year', #colonne où se trouve la date
+                time.optimize.ssr = dateopti, #période de maximisation
+                time.plot=date0:date3) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Ylim = ordonnee)}
+```
+
+```{r}
+
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+poids1=synth.tables$tab.w%>%rename(poids=w.weights)
+poids1 = poids1%>%rename(Country.Code=unit.names)
+poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
+solpoids=synth.out$solution.w
+dfstrat = data.frame()
+
+for (countries in unique(poids1$Country.Code)){
+        for (i in 1:length(unique(df.melt$Country.Code))){ 
+          #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
+          
+          if (countries == df.melt$Country.Code[i] & i <ind_pays){
+            for (years in date0:date3){
+            newrow = data.frame(valeur=df.melt[df.melt$Country.Code==countries & df.melt$year==years,][,valeur]*solpoids[i], Country.Code=countries, index=unique(df.melt[df.melt$Country.Code==countries,]$id_country), weight = solpoids[i], year = years)
+            dfstrat = rbind(dfstrat, newrow)}}
+          
+          if (countries == df.melt$Country.Code[i] & i >ind_pays){
+            print(i)
+            for (years in date0:date3){
+            newrow = data.frame(valeur=df.melt[df.melt$Country.Code==countries & df.melt$year==years,][,valeur]*solpoids[i-1],Country.Code=countries, index=unique(df.melt[df.melt$Country.Code==countries,]$id_country),  weight = solpoids[i-1], year = years)
+            dfstrat = rbind(dfstrat, newrow)}}
+          }  
+}
+
+
+#On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
+dfstratfin = data.frame()
+for (years in date0:date3){#on initialise
+  newrow = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years,]$valeur
+  temp_df = data.frame(valeur=newrow, Country.Code=unique(dfstrat$Country.Code)[1], year = years, id_country=unique(df.melt[df.melt$Country.Code==unique(dfstrat$Country.Code)[1],]$id_country), 
+weight = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years, ]$weight)
+  dfstratfin = rbind(dfstratfin, temp_df)
+  
+  for (countries in unique(dfstrat$Country.Code)[2:nb_country_plot]){ #on garde ceux les plus élevés
+    newrow = newrow + dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years, ]$valeur
+    
+    temp_df = data.frame(valeur=newrow, id_country=unique(df.melt[df.melt$Country.Code==countries,]$id_country), Country.Code=countries, 
+weight = dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years,]$weight, year = years)
+    dfstratfin = rbind(dfstratfin, temp_df)
+  }}
+
+
+
+#On rajoute l'unité synthétique
+for (years in date0:date3){
+  newrow = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years,]$valeur
+  for (countries in unique(dfstrat$Country.Code)[2:length(unique(dfstrat$Country.Code))]){ #on rajoute les petites valeurs
+    newrow = newrow + dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years, ]$valeur}
+  temp_df = data.frame(valeur=newrow, id_country=0, Country.Code='Synthetic Unit', weight = 1, year = years)
+  dfstratfin = rbind(dfstratfin, temp_df)
+}
+dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+
+
+#On ajoute la vraie valeur pour la France
+for (years in date0:date3){
+  temp_df = data.frame(valeur=df.melt[df.melt$Country.Code == pays & df.melt$year == years,][,valeur], Country.Code= pays, year=years, weight = 1, id_country = ind_pays)
+
+  dfstratfin=rbind(dfstratfin, temp_df)}
+
+colorplot = ggplot(data=dfstratfin,aes(x=year, y=valeur))+
+  geom_line(aes(group=Country.Code, col=Country.Code))
+
+print(colorplot)
+```
+
+```{r}
+df_stratTitouanBM=function(df.melt=df_BM, liste_value='gdb_hab', pays='FRA', date0=2000, date1=2005, date2=2012, date3=2016, ordonnee = NA, nb_country_plot = 5, synthdon=FALSE, synth.out=0, dataprep.out=0){
+valeur=liste_value[1]
+ind_pays= unique(subset(df.melt, Country.Code == pays)['id_country'])[1, 1]
+dateopti = date0:date3
+
+if(synthdon==FALSE){
+dataprep.out=Synth::dataprep(foo=df.melt,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = date2, #période pré-traitement
+                special.predictors = gen_liste(liste_value, c(date1:2009,2011:date2)),
+                dependent=liste_value[1], #variable d'intérêt
+                unit.variable = 'id_country', #colonne avec les index des pays
+                unit.names.variable="Country.Code", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(unique(subset(df.melt, Country.Code!=pays)['id_country'])[,1]), #n° des unités de contrôles
+                time.variable = 'year', #colonne où se trouve la date
+                time.optimize.ssr = dateopti, #période de maximisation
+                time.plot=date0:date3) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Ylim = ordonnee)}
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+poids1=synth.tables$tab.w%>%rename(poids=w.weights)
+poids1 = poids1%>%rename(Country.Code=unit.names)
+poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
+solpoids=synth.out$solution.w
+dfstrat = data.frame()
+
+for (countries in unique(poids1$Country.Code)){
+  print(countries)
+        for (i in 1:length(unique(df.melt$Country.Code))){ 
+          #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
+          
+          if (countries == df.melt$Country.Code[df.melt$id_country==i] & i <ind_pays){
+            for (years in date0:date3){
+            newrow = data.frame(valeur=df.melt[df.melt$Country.Code==countries & df.melt$year==years,][,valeur]*solpoids[i], Country.Code=countries, index=unique(df.melt[df.melt$Country.Code==countries,]$id_country), weight = solpoids[i], year = years)
+            dfstrat = rbind(dfstrat, newrow)}}
+          
+          if (countries == df.melt$Country.Code[df.melt$id_country==i] & i >ind_pays){
+            for (years in date0:date3){
+            newrow = data.frame(valeur=df.melt[df.melt$Country.Code==countries & df.melt$year==years,][,valeur]*solpoids[i-1], Country.Code=countries, index=unique(df.melt[df.melt$Country.Code==countries,]$id_country),  weight = solpoids[i-1], year = years)
+            dfstrat = rbind(dfstrat, newrow)}}
+          }  
+}
+
+
+#On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
+dfstratfin = data.frame()
+for (years in date0:date3){#on initialise
+  newrow = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years,]$valeur
+  temp_df = data.frame(valeur=newrow, Country.Code=unique(dfstrat$Country.Code)[1], year = years, id_country=unique(df.melt[df.melt$Country.Code==unique(dfstrat$Country.Code)[1],]$id_country), 
+weight = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years, ]$weight)
+  dfstratfin = rbind(dfstratfin, temp_df)
+  
+  for (countries in unique(dfstrat$Country.Code)[2:nb_country_plot]){ #on garde ceux les plus élevés
+    newrow = newrow + dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years, ]$valeur
+    
+    temp_df = data.frame(valeur=newrow, id_country=unique(df.melt[df.melt$Country.Code==countries,]$id_country), Country.Code=countries, 
+weight = dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years,]$weight, year = years)
+    dfstratfin = rbind(dfstratfin, temp_df)
+  }}
+
+
+
+#On rajoute l'unité synthétique
+for (years in date0:date3){
+  newrow = dfstrat[dfstrat$Country.Code == unique(dfstrat$Country.Code)[1] & dfstrat$year == years,]$valeur
+  for (countries in unique(dfstrat$Country.Code)[2:length(unique(dfstrat$Country.Code))]){ #on rajoute les petites valeurs
+    newrow = newrow + dfstrat[dfstrat$Country.Code == countries & dfstrat$year == years, ]$valeur}
+  temp_df = data.frame(valeur=newrow, id_country=0, Country.Code='Synthetic Unit', weight = 1, year = years)
+  dfstratfin = rbind(dfstratfin, temp_df)
+}
+dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+
+
+#On ajoute la vraie valeur pour la France
+for (years in date0:date3){
+  temp_df = data.frame(valeur=df.melt[df.melt$Country.Code == pays & df.melt$year == years,][,valeur], Country.Code= pays, year=years, weight = 1, id_country = ind_pays)
+
+  dfstratfin=rbind(dfstratfin, temp_df)}
+
+colorplot = ggplot(data=dfstratfin,aes(x=year, y=valeur))+
+  geom_line(aes(group=Country.Code, col=Country.Code))
+
+print(colorplot)
+}
+
+```
+```{r}
+unique(poids1$Country.Code)
 ```
 
 ```{r}

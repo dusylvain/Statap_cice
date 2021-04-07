@@ -597,9 +597,7 @@ ggplot(data=dfstratfin,aes(x=temps, valeur)) +
   geom_line(aes(group=country, col=country))  
 }
 ```
-```{r}
-graph_strat(liste_value='VA')
-```
+
 
 
 ###Fonction synth sans avoir à tout mettre
@@ -637,7 +635,7 @@ print(poids1)
 df_stratTitouan(df.melt=df.melt, liste_value=liste_value, pays=pays, date0=dateplot[1], date1=dateopti[1], date2=dateopti[length(dateopti)], date3=dateplot[length(dateplot)], synth.out= synth.out, dataprep.out=dataprep.out, synthdon=TRUE)}
 ```
 ```{r}
-simpleSynth(c('VA', 'W', 'Productivite','Invest_pop'), df.melt=df.melted_i, dateplot=1998:2016)
+simpleSynth(c('evol_VA', 'W', 'Productivite','Invest_pop'), df.melt=df.evol.filtered, dateplot=2000:2016)
 ```
 
 

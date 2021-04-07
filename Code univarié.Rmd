@@ -238,6 +238,26 @@ liste=as.list(liste)
 return(liste)
 }
 ```
+#Nouvelle fonction gen_liste plus adaptable et qui évite l'overfitting !
+```{r}
+gen_liste2=function(liste_value, date=c(list(2000:2007), list(2008:2011), 2012))
+{
+a=0
+
+for(i in liste_value ){
+  for (j in date){
+    a=a+1
+    if(a==1){liste=list(list(i,j, "mean"))}
+    
+    else{liste=c(liste, list(list(i, j, "mean")))  }
+  }
+}
+liste=as.list(liste)
+
+return(liste)
+}
+
+```
 
 ```{r}
 df.evol.filtered = filter(df.evol, ! temps %in% c(1998, 1999))
@@ -544,6 +564,7 @@ nb_country_plot = 5
 valeur=liste_value[1]
 date_plot_inf = 2000 #la première année du df
 date_plot_sup = 2016
+dateplot=
 
 ind_pays= unique(subset(df_synth, country == pays)['index'])[1, 1]
 dateopti = date_opti_inf:date_opti_sup
@@ -552,7 +573,7 @@ dateopti = date_opti_inf:date_opti_sup
 dataprep.out=Synth::dataprep(foo=df_synth,
                 predictors.op = "mean", #La manière dont on les prend en compte
                 time.predictors.prior = date2, #période pré-traitement
-                special.predictors = gen_liste(liste_value, date_opti_inf, date_opti_sup),
+                special.predictors = gen_liste(liste_value, date_opti_inf:date_opti_sup),
                 dependent=liste_value[1], #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
