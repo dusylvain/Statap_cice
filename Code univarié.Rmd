@@ -2,9 +2,10 @@
 SOMMAIRE DE CE FICHIER : 
 Lignes 1 à 200 : préparation des données, importation des bases, etc (je crois qu'il manque la conversion avec les taux de change)
 Lignes 200 à 250 : fonctions utilisées dans la fonction principale
-Lignes 250 à 400 : fonction qui effectue le contrôle synthétique univarié
-Lignes 400 à 530 : Calcul des RMSPE
-Lignes 530 et plus : travail en cours sur du brouillon
+Lignes 250 à 400 : fonctions prépaplot et stratplot
+Lignes 400 à 450 : fonction qui effectue le contrôle synthétique univarié
+Lignes 450 à 580 : Calcul des RMSPE
+Lignes 580 et plus : travail en cours sur du brouillon
 ```{r}
 library(ggplot2)
 library(reshape2)
@@ -15,7 +16,7 @@ library(numDeriv)
 library('alabama')
 library("rgenoud")
 library(tidyr)
-
+library(RColorBrewer)
 
 ```
 
@@ -200,7 +201,13 @@ df.evol=df.evol%>%rename(evol_Emp=evol_VA)
 df.evol=f('VA', df.melt=df.evol)
 ```
 
+```{r}
+df.evol.filtered = filter(df.evol, ! temps %in% c(1998, 1999))
+#df.evol = df.evol[order(df.evol$index),]
+#df.evol = df.evol[order(df.evol$country),]
+df_without_reforms = filter(df.evol, ! country %in% c('ESP','ITA','PRT', 'DNK'))
 
+```
 
 
 
@@ -238,39 +245,160 @@ liste=as.list(liste)
 return(liste)
 }
 ```
-#Nouvelle fonction gen_liste plus adaptable et qui évite l'overfitting !
-```{r}
-gen_liste2=function(liste_value, date=c(list(2000:2007), list(2008:2011), 2012))
-{
-a=0
 
-for(i in liste_value ){
-  for (j in date){
-    a=a+1
-    if(a==1){liste=list(list(i,j, "mean"))}
-    
-    else{liste=c(liste, list(list(i, j, "mean")))  }
+## Fonction qui fait la préparation des données pour le plot
+```{r}
+prepaplot = function(synth_out = Synth::synth(data.prep.obj = dataprep.out, method = "BFGS"), 
+                    synth_tables = Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out),
+                    df = df_synth, 
+                    n_countries = nb_country_plot,
+                    date_inf = date_plot_inf,
+                    date_sup = date_plot_sup,
+                    valeur = liste_value[1],
+                    treated_unit = pays){
+  #synth_out : vaut synth.out, la sortie de l'optimisation via le package synth à représenter
+  #synth_tables : vaut synth.tables, la sortie de l'optimisation via le package synth à représenter
+  #df : la dataframe exploité pour faire le contrôle synthétique, afin de récupérer les bonnes valeurs des pays
+  #n_countries : le nombre de pays contributeurs au contrefactuel que l'on souhaite représenter
+  #date_inf : la date de début du graphique
+  #date_sup : la date de fin du graphique
+  #valeur : l'indicateur qui fait l'objet du contrôle synthétique
+  #treated_unit : le pays sur lequel on effectue le contrôle synthétique
+  
+  indic = unique(subset(df, country == treated_unit)['index'])[1, 1]
+  solpoids = synth_out$solution.w
+  poids1=synth_tables$tab.w%>%rename(poids=w.weights)
+  poids1 = poids1%>%rename(country=unit.names)
+  poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
+  df_synth = df
+  
+  dfstrat = data.frame()
+
+  for (countries in unique(poids1$country)){
+          for (i in 1:length(unique(df_synth$country))){ 
+            #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
+            
+            if (countries == df_synth$country[i] & i <indic){
+              for (years in date_inf:date_sup){
+              newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i],
+                            index=unique(df_synth[df_synth$country==countries,]$index),
+                            country=countries,
+                            weight = solpoids[i],
+                            temps = years)
+              dfstrat = rbind(dfstrat, newrow)}}
+            
+            if (countries == df_synth$country[i] & i >indic){
+              for (years in date_inf:date_sup){
+              newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i-1],
+                            index=unique(df_synth[df_synth$country==countries,]$index),
+                            country=countries,
+                            weight = solpoids[i-1],
+                            temps = years)
+              dfstrat = rbind(dfstrat, newrow)}}
+            }  
   }
-}
-liste=as.list(liste)
-
-return(liste)
-}
-
+  
+  
+  #On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
+  dfstratfin = data.frame()
+  for (years in date_inf:date_sup){#on initialise
+    i=1
+    newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
+    temp_df = data.frame(valeur=newrow,
+                         index=unique(df_synth[df_synth$country==unique(dfstrat$country)[1],]$index),
+                         country=unique(dfstrat$country)[1],
+                         weight = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years, ]$weight,
+                         temps = years)
+    temp_df$Legende = paste(i, '. ', temp_df$country, ' (',  round(temp_df$weight, digits = 3), ')' )
+    dfstratfin = rbind(dfstratfin, temp_df)
+    
+    for (countries in unique(dfstrat$country)[2:n_countries]){ #on garde ceux les plus élevés
+      i=i+1
+      newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur
+      
+      temp_df = data.frame(valeur=newrow,
+                           index=unique(df_synth[df_synth$country==countries,]$index),
+                           country=countries,
+                           weight = dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$weight,
+                           temps = years)
+      temp_df$Legende = paste(i, '. ', temp_df$country, ' (',  round(temp_df$weight, digits = 3), ')' )
+      dfstratfin = rbind(dfstratfin, temp_df)
+    }}
+  
+  
+  
+  #On rajoute l'unité synthétique
+  for (years in date_inf:date_sup){
+    newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
+    for (countries in unique(dfstrat$country)[2:length(unique(dfstrat$country))]){ #on rajoute les petites valeurs
+      newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur}
+    temp_df = data.frame(valeur=newrow,
+                            index=0,
+                            country='Unité synthétique',
+                            weight = 1,
+                            temps = years)
+    temp_df$Legende = paste(temp_df$country)
+    dfstratfin = rbind(dfstratfin, temp_df)
+  }
+  dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+  
+  
+  #On ajoute la vraie valeur pour la France
+  for (years in date_inf:date_sup){
+    temp_df = data.frame(valeur=df_synth[df_synth$country == treated_unit & df_synth$temps == years,][,valeur],
+                         country= 'Unité traitée',
+                         temps=years,
+                         weight = 1,
+                         index = indic)
+    temp_df$Legende = paste(temp_df$country)
+    dfstratfin=rbind(dfstratfin, temp_df)}
+  
+  dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+  
+  return(dfstratfin)
+  }
 ```
 
-```{r}
-df.evol.filtered = filter(df.evol, ! temps %in% c(1998, 1999))
-#df.evol = df.evol[order(df.evol$index),]
-#df.evol = df.evol[order(df.evol$country),]
-df_without_reforms = filter(df.evol, ! country %in% c('ESP','ITA','PRT', 'DNK'))
+#Fonction qui fait le plut cumulatif
 
+```{r}
+stratplot = function(df = dfstratfin,
+                     synth_colors = 'Blues',
+                     treated_color = 'red', 
+                     name = plot_title,
+                     y_name = ordonnee_name){
+  #df : le df sorti par la fonction prepaplot
+  #synth_color : la palette de couleur utilisée pour les contributions à l'unité synthétique
+  #treated_color : la couleur de l'unité traitée
+  #name : le titre du graphique, à remplir en string
+  #y_name : le nom de l'ordonnée, en string également
+  min = 10 - length(unique(df[df$country != 'Unité traitée',]$country))
+  pal = c(brewer.pal(n = 9, name = synth_colors)[min:9], treated_color)
+  
+  lines = c(rep('dashed', length(df[df$country != 'Unité traitée',]$country)), rep('solid', length(df[df$country == 'Unité traitée',]$country)))
+  
+  colorplot = ggplot(data=df,aes(x=temps, y=valeur))+
+    geom_point(data=df, aes(group=Legende, col=Legende), show.legend = TRUE) +
+    geom_line(data=df, aes(group=Legende, col=Legende), linetype = lines, show.legend = TRUE) +
+    scale_color_manual(values = pal) +
+  
+    #On met une barre verticale pour séparer avant et après le traitement
+    geom_vline(xintercept = 2012.5, colour = 'grey', size = 1, linetype = 'dashed') +
+    
+    #On règle les paramètres d'esthétique généraux
+    labs(title = name,
+         x = "Année",
+         y = y_name) +
+    theme_minimal()
+
+  print(colorplot)
+}
 ```
 
 
-###FONCTION QUI FAIT DE L'ANALYSE UNIVARIEE
+##FONCTION QUI FAIT DE L'ANALYSE UNIVARIEE
 ```{r}
-univariate_synth=function(liste_value, df_synth=df.melted_i, pays='FRA', date_opti_inf = 2000,date_opti_sup = 2012, ordonnee = NA, date_plot_inf = 1998, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE){
+univariate_synth=function(liste_value, df_synth=df.melted_i, pays='FRA', date_opti_inf = 2000,date_opti_sup = 2012, ordonnee = NA, date_plot_inf = 1998, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE, ordonnee_name, plot_title){
 
   #liste_value : la variable sur laquelle on optimise, au format c('nom de colonne')
   #df_synth : nom du df où sont les variables
@@ -312,107 +440,33 @@ synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.o
 poids1=synth.tables$tab.w%>%rename(poids=w.weights)
 poids1 = poids1%>%rename(country=unit.names)
 poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
-solpoids=synth.out$solution.w
 
 
 ###  GRAPHIQUES EN COULEURS
 
 if (colorgraph == TRUE){
-dfstrat = data.frame()
+  dfstratfin = prepaplot(synth_out = synth.out, 
+                         synth_tables = synth.tables,
+                         df = df_synth,
+                         n_countries = nb_country_plot,
+                         date_inf = date_plot_inf,
+                         date_sup = date_plot_sup,
+                         valeur = liste_value[1],
+                         treated_unit = pays)
 
-#ON COMMENCE PAR RECUPERER, POUR CHAQUE PAYS, SA CONTIBUTION (valeur*poids)
-for (countries in unique(poids1$country)){
-        for (i in 1:length(unique(df_synth$country))){ 
-          #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
-          
-          if (countries == df_synth$country[i] & i <ind_pays){
-            for (years in date_plot_inf:date_plot_sup){
-            newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i],
-                          index=unique(df_synth[df_synth$country==countries,]$index),
-                          country=countries,
-                          weight = solpoids[i],
-                          temps = years)
-            dfstrat = rbind(dfstrat, newrow)}}
-          
-          if (countries == df_synth$country[i] & i >ind_pays){
-            for (years in date_plot_inf:date_plot_sup){
-            newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i-1],
-                          index=unique(df_synth[df_synth$country==countries,]$index),
-                          country=countries,
-                          weight = solpoids[i-1],
-                          temps = years)
-            dfstrat = rbind(dfstrat, newrow)}}
-          }  
-}
-
-
-#On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
-dfstratfin = data.frame()
-for (years in date_plot_inf:date_plot_sup){#on initialise
-  newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
-  temp_df = data.frame(valeur=newrow,
-                       index=unique(df_synth[df_synth$country==unique(dfstrat$country)[1],]$index),
-                       country=unique(dfstrat$country)[1],
-                       weight = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years, ]$weight,
-                       temps = years)
-  dfstratfin = rbind(dfstratfin, temp_df)
-  
-  for (countries in unique(dfstrat$country)[2:nb_country_plot]){ #on garde ceux les plus élevés
-    newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur
-    
-    temp_df = data.frame(valeur=newrow,
-                         index=unique(df_synth[df_synth$country==countries,]$index),
-                         country=countries,
-                         weight = dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$weight,
-                         temps = years)
-    dfstratfin = rbind(dfstratfin, temp_df)
-  }}
-
-
-#On ajoute l'unité synthétique
-for (years in date_plot_inf:date_plot_sup){
-  newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
-  for (countries in unique(dfstrat$country)[2:length(unique(dfstrat$country))]){ 
-    newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur}
-  temp_df = data.frame(valeur=newrow,
-                          index=0,
-                          country='Synthetic Unit',
-                          weight = 1,
-                          temps = years)
-  dfstratfin = rbind(dfstratfin, temp_df)
-}
-dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
-
-#On ajoute la vraie valeur pour la France
-for (years in date_plot_inf:date_plot_sup){
-  temp_df = data.frame(valeur=df_synth[df_synth$country == pays & df_synth$temps == years,][,valeur],
-                       country= pays,
-                       temps=years,
-                       weight = 1,
-                       index = ind_pays)
-
-  dfstratfin=rbind(dfstratfin, temp_df)}
-
-#On trace le graphique
-colorplot = ggplot(data=dfstratfin,aes(x=temps, y=valeur))+
-  geom_line(aes(group=country, col=country))
-
-print(colorplot)
+  stratplot(df = dfstratfin,
+            synth_colors = 'Blues',
+            treated_color = 'red', 
+            name = plot_title,
+            y_name = ordonnee_name)
 }
 return(poids1)
 }
 ```
 
 ```{r}
-poids = univariate_synth(c('VA_ind'), df_synth=df.evol, date_opti_inf = 2001, date_opti_sup = 2012, pays = 'FRA', date_plot_inf = 2000, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE)
+poids = univariate_synth(c('VA_ind'), df_synth=df.evol, date_opti_inf = 2001, date_opti_sup = 2012, pays = 'FRA', date_plot_inf = 2000, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE, ordonnee_name ='Valeur Ajoutée \n(base 100 en 2000)', plot_title = "Trajectoire de la France réelle et contrefactuelle, \net contributions des différents pays à l'unité contrefactuelle")
 ```
-
-
-
-
-
-
-
 
 ON CALCULE MAINTENANT LES RMSPE SUR LA BASE df.evol
 
@@ -564,7 +618,6 @@ nb_country_plot = 5
 valeur=liste_value[1]
 date_plot_inf = 2000 #la première année du df
 date_plot_sup = 2016
-dateplot=
 
 ind_pays= unique(subset(df_synth, country == pays)['index'])[1, 1]
 dateopti = date_opti_inf:date_opti_sup
@@ -572,113 +625,86 @@ dateopti = date_opti_inf:date_opti_sup
 #Version avec les différentes dates version Synth
 dataprep.out=Synth::dataprep(foo=df_synth,
                 predictors.op = "mean", #La manière dont on les prend en compte
-                time.predictors.prior = date2, #période pré-traitement
-                special.predictors = gen_liste(liste_value, date_opti_inf:date_opti_sup),
+                time.predictors.prior = date_opti_sup, #période pré-traitement
+                special.predictors = gen_liste(liste_value, date_opti_inf, date_opti_sup),
                 dependent=liste_value[1], #variable d'intérêt
                 unit.variable = "index", #colonne avec les index des pays
                 unit.names.variable="country", #nom des pays
                 treatment.identifier = ind_pays, # n° de l'unité traitée
                 controls.identifier = c(unique(subset(df_synth, country!= pays)['index'])[,1]), #n° des unités de contrôles
                 time.variable = 'temps', #colonne où se trouve la date
-                time.optimize.ssr = dateopti, #période de maximisation
-                time.plot=dateplot) #période tracée sur le graphique
+                time.optimize.ssr = date_opti_inf:date_opti_sup, #période de maximisation
+                time.plot=date_plot_inf:date_plot_sup) #période tracée sur le graphique
 
 synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
 
 Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
 Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright", Ylim = ordonnee)
-synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
-poids1=synth.tables$tab.w%>%rename(poids=w.weights)
-poids1 = poids1%>%rename(country=unit.names)
-poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
-
-dfstrat = data.frame()
-
-for (countries in unique(poids1$country)){
-        for (i in 1:length(unique(df_synth$country))){ 
-          #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
-          
-          if (countries == df_synth$country[i] & i <ind_pays){
-            for (years in date_plot_inf:date_plot_sup){
-            newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i],
-                          index=unique(df_synth[df_synth$country==countries,]$index),
-                          country=countries,
-                          weight = solpoids[i],
-                          temps = years)
-            dfstrat = rbind(dfstrat, newrow)}}
-          
-          if (countries == df_synth$country[i] & i >ind_pays){
-            for (years in date_plot_inf:date_plot_sup){
-            newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i-1],
-                          index=unique(df_synth[df_synth$country==countries,]$index),
-                          country=countries,
-                          weight = solpoids[i-1],
-                          temps = years)
-            dfstrat = rbind(dfstrat, newrow)}}
-          }  
-}
-
-
-#On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
-dfstratfin = data.frame()
-for (years in date_plot_inf:date_plot_sup){#on initialise
-  newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
-  temp_df = data.frame(valeur=newrow,
-                       index=unique(df_synth[df_synth$country==unique(dfstrat$country)[1],]$index),
-                       country=unique(dfstrat$country)[1],
-                       weight = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years, ]$weight,
-                       temps = years)
-  dfstratfin = rbind(dfstratfin, temp_df)
-  
-  for (countries in unique(dfstrat$country)[2:nb_country_plot]){ #on garde ceux les plus élevés
-    newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur
-    
-    temp_df = data.frame(valeur=newrow,
-                         index=unique(df_synth[df_synth$country==countries,]$index),
-                         country=countries,
-                         weight = dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$weight,
-                         temps = years)
-    dfstratfin = rbind(dfstratfin, temp_df)
-  }}
-
-
-
-#On raajoute l'unité synthétique
-for (years in date_plot_inf:date_plot_sup){
-  newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
-  for (countries in unique(dfstrat$country)[2:length(unique(dfstrat$country))]){ #on rajoute les petites valeurs
-    newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur}
-  temp_df = data.frame(valeur=newrow,
-                          index=0,
-                          country='Synthetic Unit',
-                          weight = 1,
-                          temps = years)
-  dfstratfin = rbind(dfstratfin, temp_df)
-}
-dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
-
-
-#On ajoute la vraie valeur pour la France
-for (years in date_plot_inf:date_plot_sup){
-  temp_df = data.frame(valeur=df_synth[df_synth$country == pays & df_synth$temps == years,][,valeur],
-                       country= pays,
-                       temps=years,
-                       weight = 1,
-                       index = ind_pays)
-
-  dfstratfin=rbind(dfstratfin, temp_df)}
-
-colorplot = ggplot(data=dfstratfin,aes(x=temps, y=valeur))+
-  geom_line(aes(group=country, col=country))
-
-print(colorplot)
-
+#synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+#poids1=synth.tables$tab.w%>%rename(poids=w.weights)
+#poids1 = poids1%>%rename(country=unit.names)
+#poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
 ```
+
+TRAVAIL SUR L'ESTHETIQUE DES GRAPHIQUES
 
 ```{r}
-
-#group.colors = (unique(dfstratfin[dfstratfin$index==1],]$country)
-colorplot = ggplot(data=dfstratfin,aes(x=temps, y=valeur))+
-  geom_line(aes(group=country, col=country))#+
-  #scale_fill_manual(values=group.colors)
+dfstratfin = prepaplot()
 ```
+
+
+```{r}
+min = 10 - length(unique(dfstratfin[dfstratfin$country != 'Unité traitée',]$country))
+pal = c(brewer.pal(n = 9, name = 'Blues')[min:9], 'red')
+
+lines = c(rep('dashed', length(dfstratfin[dfstratfin$country != 'Unité traitée',]$country)), rep('solid', length(dfstratfin[dfstratfin$country == 'Unité traitée',]$country)))
+
+colorplot = ggplot(data=dfstratfin,aes(x=temps, y=valeur))+
+  geom_point(data=dfstratfin, aes(group=Legende, col=Legende), show.legend = TRUE) +
+  geom_line(data=dfstratfin, aes(group=Legende, col=Legende), linetype = lines, show.legend = TRUE) +
+  scale_color_manual(values = pal) +
+
+  #On met une barre verticale pour séparer avant et après le traitement
+  geom_vline(xintercept = 2012.5, colour = 'grey', size = 1, linetype = 'dashed') +
+  
+  #On règle les paramètres d'esthétique généraux
+  labs(title = paste("Trajectoire de la VA pour la France et l'unité synthétique,\net contribution au contrefactuel des", nb_country_plot, 'pays les plus importants'),
+       x = "Année",
+       y = "Valeur ajoutée \n(base 100 en 2000)") +
+  theme_minimal()
+
+print(colorplot)
+```
+
+
+```{r}
+stratplot = function(df = dfstratfin,
+                     synth_color = 'Blues',
+                     treated_color = 'red', 
+                     name = 'TEST',
+                     ordonne_name = 'detetste'){
+  min = 10 - length(unique(df[df$country != 'Unité traitée',]$country))
+  pal = c(brewer.pal(n = 9, name = synth_color)[min:9], treated_color)
+  
+  lines = c(rep('dashed', length(df[df$country != 'Unité traitée',]$country)), rep('solid', length(df[df$country == 'Unité traitée',]$country)))
+  
+  colorplot = ggplot(data=df,aes(x=temps, y=valeur))+
+    geom_point(data=df, aes(group=Legende, col=Legende), show.legend = TRUE) +
+    geom_line(data=df, aes(group=Legende, col=Legende), linetype = lines, show.legend = TRUE) +
+    scale_color_manual(values = pal) +
+  
+    #On met une barre verticale pour séparer avant et après le traitement
+    geom_vline(xintercept = 2012.5, colour = 'grey', size = 1, linetype = 'dashed') +
+    
+    #On règle les paramètres d'esthétique généraux
+    labs(title = name,
+         x = "Année",
+         y = ordonne_name) +
+    theme_minimal()
+
+  print(colorplot)
+}
+stratplot()
+```
+
+
