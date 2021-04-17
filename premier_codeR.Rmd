@@ -159,7 +159,7 @@ for(countries in pays){
   if(countries==pays[1]){d=t(newcol1)}
   else{d=rbind(d, t(newcol1))}
 }
-d}
+d=t(d)}
 d=prepadonnees2(df.melted_i, 'Emploi', c("FRA", "DEU", "GBR", "ESP", "ITA", "SWE"))
 
 ```
@@ -173,9 +173,9 @@ multi_stat_tests<- function(tableau){
   tableau=data.frame(tableau)
     p <- ncol(tableau)
     df_multi <- data.frame(var=names(tableau),
-    adf.pvalue=sapply(tableau, function(x) adf.test(x[!is.na(x)])$p.value),#on fait un test par colonne
-    kpss.pvalue=sapply(tableau, function(x) kpss.test(x[!is.na(x)])$p.value),
-    PP.pvalue=sapply(tableau, function(x) PP.test(x[!is.na(x)])$p.value)
+    adf.pvalue=sapply(tableau, function(x) round(adf.test(x[!is.na(x)])$p.value,3)),#on fait un test par colonne
+    kpss.pvalue=sapply(tableau, function(x) round(kpss.test(x[!is.na(x)])$p.value,3)),
+    PP.pvalue=sapply(tableau, function(x) round(PP.test(x[!is.na(x)])$p.value, 3))
                            )
     df_multi$adf <- df_multi$adf.pvalue < 0.05#on compare la p-value avec 5%
     df_multi$kpss <- (df_multi$kpss.pvalue < 0.05)==FALSE#on inverse les TRUE et FALSE
@@ -187,13 +187,19 @@ multi_stat_tests<- function(tableau){
 }
 ```
 
+```{r}
+data.frame(a)[,c('var', 'adf')]
+```
 
 
 ```{r}
-a=multi_stat_tests(t(d))#le PIB
-png("test.png", height=1000, width=200)
+a=multi_stat_tests(prepadonnees2(df.melted_i, 'Emploi', c("FRA", "DEU", "GBR", "ESP", "ITA", "SWE")))#le PIB
+a=a[,c( 'adf.pvalue', 'kpss.pvalue', 'PP.pvalue','adf', 'kpss', 'PP')]
+write.csv(a, "C:/Users/sylva/Desktop/Images/tablestatioEmploi.csv" )
+a=multi_stat_tests(prepadonnees2(df.melted_i, 'VA', c("FRA", "DEU", "GBR", "ESP", "ITA", "SWE")))#le PIB
+a=a[,c( 'adf.pvalue', 'kpss.pvalue', 'PP.pvalue','adf', 'kpss', 'PP')]
+write.csv(a,"C:/Users/sylva/Desktop/Images/tablestatioVA.csv")
 
-dev.off()
 ```
 
 Il faut au plus deux retards pour rendre ces séries stationnaires, quel que soit le test considéré. A noter que False dans la colonne adf ou PP corespond à : on ne rejette pas l'absence de stationnarité (= possilement pas stationnaire), alors que False dans kpss rejette la stationnarité directement (le tout à 5%, et car on a inversé les réponses pour kpss).
