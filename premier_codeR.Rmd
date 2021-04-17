@@ -53,19 +53,35 @@ qplot(x=x, y=value, color=variable, data=df.melted, geom="line")+ xlab("Date") +
 
 
 
+
 ```{r}
-ligne_pays( compte, vari="VA", codei='VA',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de la production dans les grands pays européens") +
+VA=ligne_pays( compte, vari="VA", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de la production dans les grands pays européens") +
   xlab("année") + ylab("Valeur ajoutée, en millions d'euros/livres")
+ggsave('stat_desc_VA.jpeg', device=png(), path='C:/Users/sylva/Desktop/Images')
+```
+```{r}
+help(ggsave)
 ```
 
 ```{r}
 ligne_pays( compte, vari="EMP", codei='TOT',pays=c("FR", "DE","UK", "ES", "IT") )+ ggtitle("évolution de l'emploi dans les grands pays européens") +
   xlab("année") + ylab("nombre d'emplois en milliers")
+ggsave('stat_desc_Emploi.jpeg', device=png(), path='C:/Users/sylva/Desktop/Images')
 ```
 
 ```{r}
-ligne_pays( croiss, vari='LAB', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
+ligne_pays( croiss, vari='COMP', codei='TOT', pays=c("FR", "DE", "UK", "ES", "IT") )+ ggtitle("évolution du coût du travail dans les grands pays européens") +
   xlab("année") + ylab("coût du travail en millions d'euros")
+```
+```{r}
+df.Fr=df.melted_i[df.melted_i[,'country']=='FRA',]
+qplot(x=temps, y=VA_ind, color=country, data=df.melted_i, geom="line")+ xlab("Date") + ylab('Salaire horaire')
+qplot(x=temps, y=VA_ind, color='Black', data=df.melted_i[df.melted_i$country=='FRA',], geom="line")
+```
+
+```{r}
+qplot(x=temps, y=W, color=country, data=df.melted_i, geom="line")+ xlab("Date") + ylab('Salaire horaire')
+
 ```
 
 
@@ -117,7 +133,7 @@ Le test de Philipps-Peron donne bien que la série est stationnaire d'ordre 2.
 
 
 ```{r}
-prepadonnees<- function(base, vari, codei){
+prepadonnees<- function(base, vari, codei, pays){
 tableau=subset(base,var==vari & code==codei)[c("country", lignedata)] 
 rownames(tableau)<-tableau[,1]
 tableau<-tableau[,-1]
@@ -125,10 +141,31 @@ tableau<-t(tableau)
 tableau
 }#cette fonction permet de créer la database sur laquelle faire les tests
 
-tableau=prepadonnees(croiss, 'LAB', 'TOT')
+tableau=prepadonnees(croiss, 'LAB', 'TOT', pays=c("FRA", "DEU", "UK", "ES", "IT"))
 #En ligne il y a les années et en colonne les pays 
 head(tableau)
+tableau=prepadonnees(capital, 'VA', 'TOT', pays=c("FRA", "DEU", "UK", "ES", "IT"))
 ```
+
+
+```{r}
+prepadonnees2=function(base, value, pays){
+df=base[c('country', 'temps', value)]
+for(countries in pays){
+  newcol=df[df$country==countries,]
+  newcol1=data.frame(newcol[,value])
+  rownames(newcol1)=newcol[,'temps']
+  colnames(newcol1)=unique(newcol$country)
+  if(countries==pays[1]){d=t(newcol1)}
+  else{d=rbind(d, t(newcol1))}
+}
+d}
+d=prepadonnees2(df.melted_i, 'Emploi', c("FRA", "DEU", "GBR", "ESP", "ITA", "SWE"))
+
+```
+
+
+
 
 
 ```{r}
@@ -153,8 +190,10 @@ multi_stat_tests<- function(tableau){
 
 
 ```{r}
-multi_stat_tests(prepadonnees(compte, 'VA', 'TOT'))#le PIB
-multi_stat_tests(prepadonnees(compte, 'EMP', 'TOT'))#le niveau d'emploi
+a=multi_stat_tests(t(d))#le PIB
+png("test.png", height=1000, width=200)
+
+dev.off()
 ```
 
 Il faut au plus deux retards pour rendre ces séries stationnaires, quel que soit le test considéré. A noter que False dans la colonne adf ou PP corespond à : on ne rejette pas l'absence de stationnarité (= possilement pas stationnaire), alors que False dans kpss rejette la stationnarité directement (le tout à 5%, et car on a inversé les réponses pour kpss).
