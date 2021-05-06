@@ -1,0 +1,827 @@
+
+Sommaire :
+lignes 1 à 200 :On reprend les 100 premières lignes habituelles pour avoir les base bien faites.
+lignes 200 à 270 : graphiques pour VA, emploi et part du travail
+lignes 270 à 410 : les fonctions classiques de l'analyse univariée
+lignes 410 à 480 : analyse de la répartitiond de la VA
+lignes 480 à 560 : analyse de la VA
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library("Synth")
+library(tidyverse)
+library(numDeriv)
+library('alabama')
+library("rgenoud")
+library(tidyr)
+library(RColorBrewer)
+library('SCtools')
+```
+
+
+
+```{r}
+capital=read.csv("Statistical_Capital.csv")
+croiss=read.csv("Statistical_Growth-Accounts.csv")
+travail=read.csv("Statistical_Labour.csv")
+
+compte=read.csv("Statistical_National-Accounts.csv")
+description=read.csv("Variable-Description.csv")
+
+autre_pays=read.csv("WB_data2.csv")
+pays2lettres=read.csv('liste_pays_2lettres.csv')
+pays3lettres=read.csv('liste_pays_3lettres.csv')
+codepays=read.csv("codes_pays.csv")
+taux_change <- read_csv("taux_change.csv")
+donnee=read.csv('donnee.csv')
+```
+
+```{r}
+donnees_bis=read.csv('donnees_complementaires.csv')
+```
+
+#les lignes avec des données
+```{r}
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
+date=seq(2000, 2017)
+```
+
+
+```{r}
+codepays=codepays %>% rename( country=ISO2.digit.Alpha)
+
+compte=compte %>% mutate(country = str_replace_all(compte$country, c("EL" = "GR", "UK" = "GB"))) 
+comptebis=left_join(compte,codepays,by="country")
+compte=comptebis%>% rename(country3L=ISO3.digit.Alpha)
+
+capital=capital %>% mutate(country = str_replace_all(capital$country, c("EL" = "GR", "UK" = "GB"))) 
+capitalbis=left_join(capital,codepays,by="country")
+capital=capitalbis%>% rename(country3L=ISO3.digit.Alpha)
+
+croiss=croiss%>% mutate(country = str_replace_all(croiss$country, c("EL" = "GR", "UK" = "GB")))
+croissbis=left_join(croiss,codepays,by="country")
+croiss=croissbis%>% rename(country3L=ISO3.digit.Alpha)
+
+```
+```{r}
+donnees_bis=donnees_bis%>% rename(taux_imposition=taux.d.imposition.sur.bÃ.nÃ.fices)
+donnees_bis=donnees_bis%>% rename(salaire_min=salaire.horaire.minimum.en.US..PPA)
+donnees_bis=donnees_bis%>% rename(protection_emploi=indice.protection.de.l.emploi)
+donnees_bis=donnees_bis%>% rename(diplome=X..des.25.64ans.diplomes.du.superieur)
+donnees_bis=donnees_bis%>% rename(IDE=IDE.entrants.en...PIB)
+```
+
+#fonction qui permet de récupérer des dataframes utilisables sur une donnée
+```{r}
+melt_ada <- function(vari,codei,basei=compte,tps=lignedata[3:22]){
+tableau=subset(basei,(var==vari)& code==codei)[c("country3L", tps,"var")]
+indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
+tableau=tableau[-indligneNA,]
+df.melted <- melt(tableau,id=c('country3L','var'))
+df.melted$temps=as.numeric(str_sub(df.melted$variable, 2, 5))
+df.melted$country=as.character(df.melted$country3L)
+return (df.melted[-3]%>% select(-country3L))}
+```
+
+
+```{r}
+df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","temps"))
+compte%>%filter(country=="JP",code=="TOT",var=="EMP") #on perd le japon a cause de 2 NA sur l'emploi
+
+df.melted$index=c(1:length((unique(df.melted$country))))
+df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
+df.melted$country=as.character(df.melted$country)
+
+df.melted=inner_join(df.melted, melt_ada("LP_QI","TOT"), by=c("country","temps"))
+df.melted=inner_join(df.melted, melt_ada("LAB","TOT",croiss), by=c("country","temps"))
+
+df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,LAB=value.y.y)
+```
+
+#le calcul du salaire réel horaire
+```{r}
+df.W=inner_join(melt_ada('COMP','TOT'), melt_ada("VA_PI",'TOT'),by=c("country","temps"))
+df.W=inner_join(df.W, melt_ada("H_EMPE",'TOT'),by=c("country","temps"))
+df.W$index=c(1:length((unique(df.W$country))))
+df.W$country=as.character(df.W$country)
+df.W$W=(df.W$value.x*100/df.W$value.y)*1000/df.W$value#le nombre d'heures travaillées est en milliers
+df.W$VA=as.numeric(df.W$W)
+df.W=df.W[,c('country','W', 'temps')]
+
+df.melted2=inner_join(df.melted, df.W, by=c("country","temps"))
+df.melted2$index=c(1:length((unique(df.melted2$country))))
+```
+
+
+#Intégration de la population taux de chomage et exportations
+
+```{r}
+df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite','LAB')]
+dfpop=subset(autre_pays,Simple.Indicator=="pop")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfpop)<-dfpop[,1]
+
+df_pop<-t(dfpop[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_pop))
+df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
+```
+
+
+```{r}
+dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfchom)<-dfchom[,1]
+dfexports=subset(autre_pays,Simple.Indicator=="exports_hab")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfexports)<-dfexports[,1]
+
+df_chom<-t(dfchom[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_chom))
+df.chom <- melt(df, id="x")%>%rename(country=variable, temps=x,chomage=value)
+df_exp<-t(dfexports[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_exp))
+df.exp <- melt(df, id="x")%>%rename(country=variable, temps=x,export=value)
+
+df.melted2=left_join(df.melted2,df.chom)
+df.melted2=left_join(df.melted2,df.pop)
+df.melted2=left_join(df.melted2,df.exp)
+
+df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
+df.melted2$Part_lab=df.melted2$LAB/df.melted2$VA
+```
+
+#Investissement
+```{r}
+df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[1:22])
+df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
+df.melted_i$index=c(1:length((unique(df.melted_i$country))))
+```
+
+#Donnée réelle et indice 100
+```{r}
+taux_change2000 <- taux_change %>% filter(year == 2010) %>%
+  rename(`rate2000 in NAT/US$` = `rate in NAT/US$`, country=country3) %>% select(-year)
+
+df.melted_i <- df.melted_i  %>% inner_join(taux_change2000, by = "country")
+df.melted_i<-df.melted_i %>% mutate(VA_pop = VA_pop/(pop*`rate2000 in NAT/US$`))
+
+donn2000=df.melted_i%>%filter(temps==2010)%>%select('country','VA','Emploi')%>%rename(VA2000=VA, Emp2000=Emploi)
+df.melted_i=df.melted_i%>%left_join(donn2000,on="country")
+
+df.melted_i$VA_ind=(df.melted_i$VA/df.melted_i$VA2000)*100
+df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2000)*100
+
+df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
+```
+
+```{r}
+donnees_bis
+df.fisc=inner_join(df.melted_i,donnees_bis%>%rename(country=country3, temps=year))
+indligneNA <- which(is.na(df.fisc),arr.ind=TRUE)[,1]
+df.fisc[unique(indligneNA),][c(1:2,22:ncol(df.fisc))]%>%arrange(by=temps)
+df.fisc=df.fisc[df.fisc$temps>1999,]#on a pas tous les pays pourles premières années, donc on prend à partir de 2000
+df.fisc$index=c(1:length((unique(df.fisc$country))))
+```
+
+#Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
+
+```{r}
+f=function(variabl=c('VA'), df.melt=df.melted_i, df.evol=df.evol){
+base=NULL
+#On peut facilement rajouter les évolutions des autres var en changeant un tt petit peu le code
+
+for (pays in unique(df.melt$country)){
+a=df.melt%>%filter(country==pays)%>%select(temps,country, variabl)
+
+a[,variabl][2:nrow(a)]=diff(a[,variabl])/a[,variabl][2:nrow(a)]*100
+a=a%>%rename(evol_VA=variabl)
+base=rbind(base,a)}
+df.evol=df.melt%>%full_join(base,on=c('country','temps'))
+df.evol=df.evol%>%filter(temps>1997)
+return(df.evol)}
+df.evol=f('Emploi')
+df.evol=df.evol%>%rename(evol_Emp=evol_VA)
+df.evol=f('VA', df.melt=df.evol)
+```
+
+
+## On commence mainteant à recréer un df avec les pays qui nous intéressent. On renommer ensuite une variable Pays, on fera un beau ggplot, et le tour sera joué.
+
+```{r}
+graphique_liste_pays = c('FRA','ESP','DEU','ITA','GBR','USA')
+graph_df = df.evol[df.evol$country %in% graphique_liste_pays, ]
+```
+
+
+```{r}
+#graph_df$Pays = 'Test'
+index_list = 'Allemagne'
+for (code in graph_df$country[2:length(graph_df$country)]){
+  if (code == 'FRA'){index_list = c(index_list, 'France')}
+  if (code == 'ESP'){index_list = c(index_list, 'Espagne')}
+  if (code == 'DEU'){index_list = c(index_list, 'Allemagne')}
+  if (code == 'ITA'){index_list = c(index_list, 'Italie')}
+  if (code == 'GBR'){index_list = c(index_list, 'Grande Bretagne')}
+  if (code == 'USA'){index_list = c(index_list, 'États-Unis')}
+}
+a= data.frame(index_list)
+graph_df$Pays = index_list
+```
+
+```{r}
+VA_plot = ggplot(data=graph_df[graph_df$country !='USA', ], aes(x=temps, y=VA_ind))+
+    geom_point(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+    geom_line(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+   
+    
+    #On règle les paramètres d'esthétique généraux
+    labs(title = 'Évolution de la valeur ajoutée dans les pays similaires à la France',
+         x = "Année",
+         y = 'Valeur ajoutée (Indice 100 en 2010)') +
+    theme_minimal()
+
+  print(VA_plot)
+```
+```{r}
+ggsave(filename = 'Statdesc_VA_2010.png')
+
+```
+
+```{r}
+Emploi_plot = ggplot(data=graph_df[graph_df$country !='USA', ], aes(x=temps, y=Emp_ind))+
+    geom_point(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+    geom_line(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+   
+    
+    #On règle les paramètres d'esthétique généraux
+    labs(title = "Évolution de l'emploi dans les pays similaires à la France",
+         x = "Année",
+         y = "Nombre d'emplois (base 100 en 2010)") +
+    theme_minimal()
+
+  print(Emploi_plot)
+```
+```{r}
+ggsave(filename = 'Statdesc_nombre_emploi_2010.png')
+
+```
+
+```{r}
+Part_lab_plot = ggplot(data=graph_df[graph_df$country !='USA', ], aes(x=temps, y=Part_lab))+
+    geom_point(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+    geom_line(data=graph_df[graph_df$country !='USA', ], aes(group=Pays, colour=Pays), show.legend = TRUE) +
+   
+    
+    #On règle les paramètres d'esthétique généraux
+    labs(title = "Évolution de la part du travail dans la distribution de la \n   valeur ajoutée dans les pays similaires à la France",
+         x = "Année",
+         y = "Part de la rémunération du travail dans la valeur ajoutée \n(en %)") +
+    theme_minimal()
+
+  print(Part_lab_plot)
+```
+```{r}
+ggsave(filename = 'Statdesc_labor_share.png')
+
+```
+Il nous restera aà faire le graphique de stat desc du salaire. 
+
+#On fait maintenant l'analyse univariée pour deux variables : l'emploi et la part du travail
+
+
+```{r}
+quiet <- function(x) { 
+  sink(tempfile()) 
+  on.exit(sink()) 
+  invisible(force(x)) 
+} 
+
+```
+
+
+```{r}
+gen_liste=function(liste_value, date1, date2)
+{
+a=0
+date=c(date1:date2)
+for(i in liste_value ){
+  for (j in date){
+    a=a+1
+    if(a==1){liste=list(list(i,j, 'mean'))}
+    
+    else{liste=c(liste, list(list(i, j, 'mean')))  }
+  }
+}
+liste=as.list(liste)
+
+return(liste)
+}
+```
+
+## Fonction qui fait la préparation des données pour le plot
+```{r}
+prepaplot = function(synth_out = Synth::synth(data.prep.obj = dataprep.out, method = "BFGS"), 
+                    synth_tables = Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out),
+                    df = df_synth, 
+                    n_countries = nb_country_plot,
+                    date_inf = date_plot_inf,
+                    date_sup = date_plot_sup,
+                    valeur = liste_value[1],
+                    treated_unit = pays){
+  #synth_out : vaut synth.out, la sortie de l'optimisation via le package synth à représenter
+  #synth_tables : vaut synth.tables, la sortie de l'optimisation via le package synth à représenter
+  #df : la dataframe exploité pour faire le contrôle synthétique, afin de récupérer les bonnes valeurs des pays
+  #n_countries : le nombre de pays contributeurs au contrefactuel que l'on souhaite représenter
+  #date_inf : la date de début du graphique
+  #date_sup : la date de fin du graphique
+  #valeur : l'indicateur qui fait l'objet du contrôle synthétique
+  #treated_unit : le pays sur lequel on effectue le contrôle synthétique
+  
+  indic = unique(subset(df, country == treated_unit)['index'])[1, 1]
+  solpoids = synth_out$solution.w
+  poids1=synth_tables$tab.w%>%rename(poids=w.weights)
+  poids1 = poids1%>%rename(country=unit.names)
+  poids1 = poids1[order(poids1$poids, decreasing=TRUE),]
+  df_synth = df
+  
+  dfstrat = data.frame()
+
+  for (countries in unique(poids1$country)){
+          for (i in 1:length(unique(df_synth$country))){ 
+            #On sépare maintenant selon si le pays a un indice plus petit que celui d'intérêt, ou plus grand, pour bien attribuer le poids correspondant au bon indice 
+            
+            if (countries == df_synth$country[i] & i <indic){
+              for (years in date_inf:date_sup){
+              newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i],
+                            index=unique(df_synth[df_synth$country==countries,]$index),
+                            country=countries,
+                            weight = solpoids[i],
+                            temps = years)
+              dfstrat = rbind(dfstrat, newrow)}}
+            
+            if (countries == df_synth$country[i] & i >indic){
+              for (years in date_inf:date_sup){
+              newrow = data.frame(valeur=df_synth[df_synth$country==countries & df_synth$temps==years,][,valeur]*solpoids[i-1],
+                            index=unique(df_synth[df_synth$country==countries,]$index),
+                            country=countries,
+                            weight = solpoids[i-1],
+                            temps = years)
+              dfstrat = rbind(dfstrat, newrow)}}
+            }  
+  }
+  
+  
+  #On crée maintenant le df avec les valeurs cumulées des contributions de chaque pays
+  dfstratfin = data.frame()
+  if (n_countries != 0){
+  for (years in date_inf:date_sup){#on initialise
+    i=1
+    newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
+    temp_df = data.frame(valeur=newrow,
+                         index=unique(df_synth[df_synth$country==unique(dfstrat$country)[1],]$index),
+                         country=unique(dfstrat$country)[1],
+                         weight = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years, ]$weight,
+                         temps = years)
+    temp_df$Legende = paste(i, '. ', temp_df$country, ' (',  round(temp_df$weight, digits = 3), ')' )
+    dfstratfin = rbind(dfstratfin, temp_df)
+    
+    for (countries in unique(dfstrat$country)[2:n_countries]){ #on garde ceux les plus élevés
+      i=i+1
+      newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur
+      
+      temp_df = data.frame(valeur=newrow,
+                           index=unique(df_synth[df_synth$country==countries,]$index),
+                           country=countries,
+                           weight = dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$weight,
+                           temps = years)
+      temp_df$Legende = paste(i, '. ', temp_df$country, ' (',  round(temp_df$weight, digits = 3), ')' )
+      dfstratfin = rbind(dfstratfin, temp_df)
+    }}}
+  
+  
+  
+  #On rajoute l'unité synthétique
+  for (years in date_inf:date_sup){
+    newrow = dfstrat[dfstrat$country == unique(dfstrat$country)[1] & dfstrat$temps == years,]$valeur
+    for (countries in unique(dfstrat$country)[2:length(unique(dfstrat$country))]){ #on rajoute les petites valeurs
+      newrow = newrow + dfstrat[dfstrat$country == countries & dfstrat$temps == years, ]$valeur}
+    temp_df = data.frame(valeur=newrow,
+                            index=0,
+                            country='France synthétique',
+                            weight = 1,
+                            temps = years)
+    temp_df$Legende = paste(temp_df$country)
+    dfstratfin = rbind(dfstratfin, temp_df)
+  }
+  dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+  
+  
+  #On ajoute la vraie valeur pour la France
+  for (years in date_inf:date_sup){
+    temp_df = data.frame(valeur=df_synth[df_synth$country == treated_unit & df_synth$temps == years,][,valeur],
+                         country= 'France',
+                         temps=years,
+                         weight = 1,
+                         index = indic)
+    temp_df$Legende = paste(temp_df$country)
+    dfstratfin=rbind(dfstratfin, temp_df)}
+  
+  dfstratfin = dfstratfin[order(dfstratfin$weight, decreasing=TRUE),]
+  
+  return(dfstratfin)
+  }
+```
+
+# Ici on fait l'analyse de la répartition de la Valeur ajotée allouée au travil
+```{r}
+liste_value = c('Part_lab')
+df_synth=df.evol
+date_opti_inf = 2001
+date_opti_sup = 2012
+pays = 'FRA'
+date_plot_inf = 1998
+date_plot_sup = 2016
+nb_country_plot = 5
+colorgraph = TRUE
+ordonnee = NA
+ordonnee_name ='Part du travail dans la rémunération de  \nla valeur ajoutée (en %)'
+plot_title = "Trajectoire de la France réelle et contrefactuelle, \net contributions des différents pays à l'unité contrefactuelle"
+
+
+valeur=liste_value[1]
+ind_pays= unique(subset(df_synth, country == pays)['index'])[1, 1]
+
+### ON EFFECTUE UN CONTROLE SYNTHÉTIQUE UNIVARIÉ
+dataprep.out=Synth::dataprep(foo=df_synth,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = date_opti_sup, #période pré-traitement
+                special.predictors = gen_liste(liste_value, date_opti_inf, date_opti_sup),
+                dependent=valeur, #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(unique(subset(df_synth, country!= pays)['index'])[,1]), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = date_opti_inf:date_opti_sup, #période de maximisation
+                time.plot=date_plot_inf:date_plot_sup) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+#ON TRACE LE GRAPHIQUE CLASSIQUE DU PACKAGE SYNTH
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright")
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+```
+```{r}
+part_lab_placebos = generate.placebos(
+dataprep.out,
+synth.out,
+Sigf.ipop = 5,
+strategy = "sequential"
+)
+```
+
+```{r}
+mspe.plot(
+part_lab_placebos,
+discard.extreme = FALSE,
+mspe.limit = 20,
+plot.hist = FALSE,
+title = NULL,
+xlab = "Ratio entre RMSPE post-traitement et pré-traitement",
+ylab = NULL
+)
+dev.print(device = png, file = "RMSPE_univ_part_lab.png", width = 600)
+
+```
+
+```{r}
+plot_placebos(
+tdf = part_lab_placebos,
+discard.extreme = FALSE,
+mspe.limit = 20,
+xlab = NULL,
+ylab = NULL,
+title = NULL,
+alpha.placebos = 1
+)
+```
+
+
+```{r}
+graph_solution = prepaplot(synth_out = synth.out, 
+                         synth_tables = synth.tables,
+                         df = df.evol,
+                         n_countries = 0,
+                         date_inf = 2000,
+                         date_sup = 2016,
+                         valeur = 'Part_lab',
+                         treated_unit = 'FRA')
+
+```
+
+```{r}
+
+style=c("solid","dashed")
+color=c("red","darkred")
+
+ggplot(data=graph_solution,aes(x=temps, group=Legende, y=valeur))+
+  geom_line(aes(linetype=Legende,color=Legende),show.legend = TRUE)+ 
+  geom_point(show.legend = TRUE) + scale_linetype_manual(values=style)+
+  scale_color_manual(values=color)+
+  theme_minimal()+
+  geom_vline(xintercept = 2012.5, colour = 'grey', size = 1, linetype = 'dashed')+
+  labs(title = "Trajectoire de la part du travail dans la répartition de la valeur ajoutée",
+       x = "Année",
+       y = "Part du travail dans la valeur ajoutée (en %)")
+ggsave('analyse_univ_part_lab.png')
+```
+
+
+
+# Nous faisons mainteanant de même avec la VA
+# On remet en base 2000, pour ne pas avoir le problème avec les données constantyes en 2010
+
+```{r}
+capital=read.csv("Statistical_Capital.csv")
+croiss=read.csv("Statistical_Growth-Accounts.csv")
+travail=read.csv("Statistical_Labour.csv")
+
+compte=read.csv("Statistical_National-Accounts.csv")
+description=read.csv("Variable-Description.csv")
+
+autre_pays=read.csv("WB_data2.csv")
+pays2lettres=read.csv('liste_pays_2lettres.csv')
+pays3lettres=read.csv('liste_pays_3lettres.csv')
+codepays=read.csv("codes_pays.csv")
+taux_change <- read_csv("taux_change.csv")
+donnee=read.csv('donnee.csv')
+```
+
+```{r}
+donnees_bis=read.csv('donnees_complementaires.csv')
+```
+
+#les lignes avec des données
+```{r}
+lignedata=c('X1995', 'X1996', 'X1997', 'X1998', 'X1999', 'X2000', 'X2001', 'X2002', 'X2003', 'X2004', 'X2005', 'X2006', 'X2007', 'X2008', 'X2009', 'X2010', 'X2011', 'X2012', 'X2013', 'X2014', 'X2015', 'X2016', 'X2017')#les colonnes de données 
+date=seq(2000, 2017)
+```
+
+
+```{r}
+codepays=codepays %>% rename( country=ISO2.digit.Alpha)
+
+compte=compte %>% mutate(country = str_replace_all(compte$country, c("EL" = "GR", "UK" = "GB"))) 
+comptebis=left_join(compte,codepays,by="country")
+compte=comptebis%>% rename(country3L=ISO3.digit.Alpha)
+
+capital=capital %>% mutate(country = str_replace_all(capital$country, c("EL" = "GR", "UK" = "GB"))) 
+capitalbis=left_join(capital,codepays,by="country")
+capital=capitalbis%>% rename(country3L=ISO3.digit.Alpha)
+
+croiss=croiss%>% mutate(country = str_replace_all(croiss$country, c("EL" = "GR", "UK" = "GB")))
+croissbis=left_join(croiss,codepays,by="country")
+croiss=croissbis%>% rename(country3L=ISO3.digit.Alpha)
+
+```
+```{r}
+donnees_bis=donnees_bis%>% rename(taux_imposition=taux.d.imposition.sur.bÃ.nÃ.fices)
+donnees_bis=donnees_bis%>% rename(salaire_min=salaire.horaire.minimum.en.US..PPA)
+donnees_bis=donnees_bis%>% rename(protection_emploi=indice.protection.de.l.emploi)
+donnees_bis=donnees_bis%>% rename(diplome=X..des.25.64ans.diplomes.du.superieur)
+donnees_bis=donnees_bis%>% rename(IDE=IDE.entrants.en...PIB)
+```
+
+#fonction qui permet de récupérer des dataframes utilisables sur une donnée
+```{r}
+melt_ada <- function(vari,codei,basei=compte,tps=lignedata[3:22]){
+tableau=subset(basei,(var==vari)& code==codei)[c("country3L", tps,"var")]
+indligneNA <- which(is.na(tableau),arr.ind=TRUE)[,1]
+tableau=tableau[-indligneNA,]
+df.melted <- melt(tableau,id=c('country3L','var'))
+df.melted$temps=as.numeric(str_sub(df.melted$variable, 2, 5))
+df.melted$country=as.character(df.melted$country3L)
+return (df.melted[-3]%>% select(-country3L))}
+```
+
+
+```{r}
+df.melted=inner_join(melt_ada('VA','TOT'),melt_ada("EMP",'TOT'),by=c("country","temps"))
+compte%>%filter(country=="JP",code=="TOT",var=="EMP") #on perd le japon a cause de 2 NA sur l'emploi
+
+df.melted$index=c(1:length((unique(df.melted$country))))
+df.melted$value.x=as.numeric(df.melted$value.x)#on transtype pour permettre aux fonctions de tourner
+df.melted$country=as.character(df.melted$country)
+
+df.melted=inner_join(df.melted, melt_ada("LP_QI","TOT"), by=c("country","temps"))
+df.melted=inner_join(df.melted, melt_ada("LAB","TOT",croiss), by=c("country","temps"))
+
+df.melted=df.melted%>% rename(VA=value.x,Emploi=value.y,Productivite=value.x.x,LAB=value.y.y)
+```
+
+#le calcul du salaire réel horaire
+```{r}
+df.W=inner_join(melt_ada('COMP','TOT'), melt_ada("VA_PI",'TOT'),by=c("country","temps"))
+df.W=inner_join(df.W, melt_ada("H_EMPE",'TOT'),by=c("country","temps"))
+df.W$index=c(1:length((unique(df.W$country))))
+df.W$country=as.character(df.W$country)
+df.W$W=(df.W$value.x*100/df.W$value.y)*1000/df.W$value#le nombre d'heures travaillées est en milliers
+df.W$VA=as.numeric(df.W$W)
+df.W=df.W[,c('country','W', 'temps')]
+
+df.melted2=inner_join(df.melted, df.W, by=c("country","temps"))
+df.melted2$index=c(1:length((unique(df.melted2$country))))
+```
+
+
+#Intégration de la population taux de chomage et exportations
+
+```{r}
+df.melted2=df.melted2[c("country",'temps','index','VA','Emploi','W','Productivite','LAB')]
+dfpop=subset(autre_pays,Simple.Indicator=="pop")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfpop)<-dfpop[,1]
+
+df_pop<-t(dfpop[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_pop))
+df.pop <- melt(df, id="x")%>%rename(country=variable, temps=x,pop=value)
+```
+
+
+```{r}
+dfchom=subset(autre_pays,Simple.Indicator=="unemployment rate")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfchom)<-dfchom[,1]
+dfexports=subset(autre_pays,Simple.Indicator=="exports_hab")[c("Country.Code","Simple.Indicator",lignedata)]
+rownames(dfexports)<-dfexports[,1]
+
+df_chom<-t(dfchom[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_chom))
+df.chom <- melt(df, id="x")%>%rename(country=variable, temps=x,chomage=value)
+df_exp<-t(dfexports[-c(1,2)])
+df <- data.frame(x=1995:2017, data.frame(df_exp))
+df.exp <- melt(df, id="x")%>%rename(country=variable, temps=x,export=value)
+
+df.melted2=left_join(df.melted2,df.chom)
+df.melted2=left_join(df.melted2,df.pop)
+df.melted2=left_join(df.melted2,df.exp)
+
+df.melted2$VA_pop=df.melted2$VA/df.melted2$pop*1000000
+df.melted2$Part_lab=df.melted2$LAB/df.melted2$VA
+```
+
+#Investissement
+```{r}
+df.invest=melt_ada('Iq_GFCF','TOT',capital,tps=lignedata[1:22])
+df.melted_i=inner_join(df.melted2,df.invest,by=c("country","temps"))
+df.melted_i$index=c(1:length((unique(df.melted_i$country))))
+```
+
+#Donnée réelle et indice 100
+```{r}
+taux_change2000 <- taux_change %>% filter(year == 2000) %>%
+  rename(`rate2000 in NAT/US$` = `rate in NAT/US$`, country=country3) %>% select(-year)
+
+df.melted_i <- df.melted_i  %>% inner_join(taux_change2000, by = "country")
+df.melted_i<-df.melted_i %>% mutate(VA_pop = VA_pop/(pop*`rate2000 in NAT/US$`))
+
+donn2000=df.melted_i%>%filter(temps==2000)%>%select('country','VA','Emploi')%>%rename(VA2000=VA, Emp2000=Emploi)
+df.melted_i=df.melted_i%>%left_join(donn2000,on="country")
+
+df.melted_i$VA_ind=(df.melted_i$VA/df.melted_i$VA2000)*100
+df.melted_i$Emp_ind=(df.melted_i$Emploi/df.melted_i$Emp2000)*100
+
+df.melted_i$Invest_pop=df.melted_i$value/df.melted_i$pop
+```
+
+```{r}
+donnees_bis
+df.fisc=inner_join(df.melted_i,donnees_bis%>%rename(country=country3, temps=year))
+indligneNA <- which(is.na(df.fisc),arr.ind=TRUE)[,1]
+df.fisc[unique(indligneNA),][c(1:2,22:ncol(df.fisc))]%>%arrange(by=temps)
+df.fisc=df.fisc[df.fisc$temps>1999,]#on a pas tous les pays pourles premières années, donc on prend à partir de 2000
+df.fisc$index=c(1:length((unique(df.fisc$country))))
+```
+
+#Evolution de la VA : base df.evol qui commence en 98 à cause du lag.
+
+```{r}
+f=function(variabl=c('VA'), df.melt=df.melted_i, df.evol=df.evol){
+base=NULL
+#On peut facilement rajouter les évolutions des autres var en changeant un tt petit peu le code
+
+for (pays in unique(df.melt$country)){
+a=df.melt%>%filter(country==pays)%>%select(temps,country, variabl)
+
+a[,variabl][2:nrow(a)]=diff(a[,variabl])/a[,variabl][2:nrow(a)]*100
+a=a%>%rename(evol_VA=variabl)
+base=rbind(base,a)}
+df.evol=df.melt%>%full_join(base,on=c('country','temps'))
+df.evol=df.evol%>%filter(temps>1997)
+return(df.evol)}
+df.evol=f('Emploi')
+df.evol=df.evol%>%rename(evol_Emp=evol_VA)
+df.evol=f('VA', df.melt=df.evol)
+```
+
+
+```{r}
+liste_value = c('Emp_ind')
+df_synth=df.evol
+date_opti_inf = 2001
+date_opti_sup = 2012
+pays = 'FRA'
+date_plot_inf = 1998
+date_plot_sup = 2016
+nb_country_plot = 5
+colorgraph = TRUE
+ordonnee = NA
+ordonnee_name ='Part du travail dans la rémunération de  \nla valeur ajoutée (en %)'
+plot_title = "Trajectoire de la France réelle et contrefactuelle, \net contributions des différents pays à l'unité contrefactuelle"
+
+
+valeur=liste_value[1]
+ind_pays= unique(subset(df_synth, country == pays)['index'])[1, 1]
+
+### ON EFFECTUE UN CONTROLE SYNTHÉTIQUE UNIVARIÉ
+dataprep.out=Synth::dataprep(foo=df_synth,
+                predictors.op = "mean", #La manière dont on les prend en compte
+                time.predictors.prior = date_opti_sup, #période pré-traitement
+                special.predictors = gen_liste(liste_value, date_opti_inf, date_opti_sup),
+                dependent=valeur, #variable d'intérêt
+                unit.variable = "index", #colonne avec les index des pays
+                unit.names.variable="country", #nom des pays
+                treatment.identifier = ind_pays, # n° de l'unité traitée
+                controls.identifier = c(unique(subset(df_synth, country!= pays)['index'])[,1]), #n° des unités de contrôles
+                time.variable = 'temps', #colonne où se trouve la date
+                time.optimize.ssr = date_opti_inf:date_opti_sup, #période de maximisation
+                time.plot=date_plot_inf:date_plot_sup) #période tracée sur le graphique
+
+synth.out <- Synth::synth(data.prep.obj = dataprep.out, method = "BFGS")
+
+#ON TRACE LE GRAPHIQUE CLASSIQUE DU PACKAGE SYNTH
+Synth::path.plot(synth.res = synth.out, dataprep.res = dataprep.out,
+Ylab = liste_value[1], Xlab = "year", Legend = c(pays, paste('synthetic',pays)), Legend.position = "bottomright")
+synth.tables <- Synth::synth.tab(dataprep.res = dataprep.out,synth.res = synth.out)
+```
+```{r}
+graph_solution = prepaplot(synth_out = synth.out, 
+                         synth_tables = synth.tables,
+                         df = df.evol,
+                         n_countries = 0,
+                         date_inf = 2000,
+                         date_sup = 2016,
+                         valeur = 'Emp_ind',
+                         treated_unit = 'FRA')
+
+```
+
+```{r}
+style=c("solid","dashed")
+color=c("red","darkred")
+
+ggplot(data=graph_solution,aes(x=temps, group=Legende, y=valeur))+
+  geom_line(aes(linetype=Legende,color=Legende),show.legend = TRUE)+ 
+  geom_point(show.legend = TRUE) + scale_linetype_manual(values=style)+
+  scale_color_manual(values=color)+
+  theme_minimal()+
+  geom_vline(xintercept = 2012.5, colour = 'grey', size = 1, linetype = 'dashed')+
+  labs(title = "Trajectoire de l'emploi",
+       x = "Année",
+       y = "Nombre d'emploi (base 100 en 2000)")
+  
+ggsave('analyse_univ_emp_ind.png')
+```
+
+
+```{r}
+emp_placebos = generate.placebos(
+dataprep.out,
+synth.out,
+Sigf.ipop = 5,
+strategy = "sequential"
+)
+```
+
+```{r}
+mspe.plot(
+emp_placebos,
+discard.extreme = FALSE,
+mspe.limit = 20,
+plot.hist = FALSE,
+title = NULL,
+xlab = "Ratio entre RMSPE post-traitement et pré-traitement",
+ylab = NULL
+)
+dev.print(device = png, file = "RMSPE_univ_emp_ind.png", width = 600)
+```
+
+```{r}
+plot_placebos(
+tdf = emp_placebos,
+discard.extreme = FALSE,
+mspe.limit = 20,
+xlab = NULL,
+ylab = NULL,
+title = NULL,
+alpha.placebos = 1
+)
+```
