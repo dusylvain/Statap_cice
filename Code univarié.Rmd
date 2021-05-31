@@ -465,7 +465,7 @@ return(poids1)
 ```
 
 ```{r}
-poids = univariate_synth(c('VA_ind'), df_synth=df.evol, date_opti_inf = 2001, date_opti_sup = 2012, pays = 'FRA', date_plot_inf = 2000, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE, ordonnee_name ='Valeur Ajoutée \n(base 100 en 2000)', plot_title = "Trajectoire de la France réelle et contrefactuelle, \net contributions des différents pays à l'unité contrefactuelle")
+poids = univariate_synth(c('Emp_ind'), df_synth=df.evol, date_opti_inf = 2001, date_opti_sup = 2012, pays = 'FRA', date_plot_inf = 2000, date_plot_sup = 2016, nb_country_plot = 5, colorgraph = TRUE, ordonnee_name ='Valeur Ajoutée \n(base 100 en 2000)', plot_title = "Trajectoire de la France réelle et contrefactuelle, \net contributions des différents pays à l'unité contrefactuelle")
 ```
 
 ON CALCULE MAINTENANT LES RMSPE SUR LA BASE df.evol
